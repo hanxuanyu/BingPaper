@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -134,12 +135,26 @@ func Init(configPath string) error {
 	v.SetDefault("admin.password_bcrypt", "$2a$10$fYHPeWHmwObephJvtlyH1O8DIgaLk5TINbi9BOezo2M8cSjmJchka") // 默认密码: admin123
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// 如果指定了配置文件但读取失败（且不是找不到文件的错误），或者没指定但也没找到
+		_, isNotFound := err.(viper.ConfigFileNotFoundError)
+		// 如果显式指定了文件，viper 报错可能不是 ConfigFileNotFoundError 而是 os.PathError
+		if !isNotFound && configPath != "" {
+			if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
+				isNotFound = true
+			}
+		}
+
+		if !isNotFound {
 			return err
 		}
+
 		// 如果文件不存在，我们使用默认值并尝试创建一个默认配置文件
-		fmt.Println("Config file not found, creating default config at ./data/config.yaml")
-		if err := v.SafeWriteConfigAs("./data/config.yaml"); err != nil {
+		targetConfigPath := configPath
+		if targetConfigPath == "" {
+			targetConfigPath = "data/config.yaml"
+		}
+		fmt.Printf("Config file not found, creating default config at %s\n", targetConfigPath)
+		if err := v.SafeWriteConfigAs(targetConfigPath); err != nil {
 			fmt.Printf("Warning: Failed to create default config file: %v\n", err)
 		}
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
 	"mime"
 
@@ -26,13 +27,19 @@ var webFS embed.FS
 // @name Authorization
 
 func main() {
+	// 解析命令行参数
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "配置文件路径")
+	flag.StringVar(&configPath, "c", "", "配置文件路径 (简写)")
+	flag.Parse()
+
 	// 注册常用 MIME 类型，确保嵌入式资源能被正确识别
 	mime.AddExtensionType(".js", "application/javascript")
 	mime.AddExtensionType(".css", "text/css")
 	mime.AddExtensionType(".svg", "image/svg+xml")
 
 	// 1. 初始化
-	r := bootstrap.Init(webFS)
+	r := bootstrap.Init(webFS, configPath)
 
 	// 2. 输出欢迎信息
 	bootstrap.LogWelcomeInfo()

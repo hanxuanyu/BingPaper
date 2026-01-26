@@ -33,6 +33,10 @@ cp config.example.yaml data/config.yaml
 
 ```bash
 go run .
+# 或者指定配置文件路径
+./BingPaper -config /path/to/config.yaml
+# 或者使用简写
+./BingPaper -c /path/to/config.yaml
 ```
 
 项目启动后会自动执行一次抓取任务，并根据 `cron.daily_spec` 设置定时任务。

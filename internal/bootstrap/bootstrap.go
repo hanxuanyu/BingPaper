@@ -23,12 +23,12 @@ import (
 )
 
 // Init 初始化应用各项服务
-func Init(webFS embed.FS) *gin.Engine {
+func Init(webFS embed.FS, configPath string) *gin.Engine {
 	// 0. 确保数据目录存在
 	_ = os.MkdirAll("data/picture", 0755)
 
 	// 1. 初始化配置
-	if err := config.Init(""); err != nil {
+	if err := config.Init(configPath); err != nil {
 		log.Fatalf("Failed to initialize config: %v", err)
 	}
 	cfg := config.GetConfig()
