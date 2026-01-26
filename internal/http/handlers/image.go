@@ -172,9 +172,11 @@ func handleImageResponse(c *gin.Context, img *model.Image) {
 	if mode == "redirect" {
 		if selected.PublicURL != "" {
 			c.Redirect(http.StatusFound, selected.PublicURL)
+		} else if img.URLBase != "" {
+			// 兜底重定向到原始 Bing
+			bingURL := fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, selected.Variant)
+			c.Redirect(http.StatusFound, bingURL)
 		} else {
-			// 兜底重定向到原始 Bing (如果可能，但由于 URLBase 只有一部分，这里可能不工作)
-			// 这里我们更倾向于 local 转发，如果 PublicURL 为空
 			serveLocal(c, selected.StorageKey)
 		}
 	} else {
@@ -201,7 +203,9 @@ func formatMeta(img *model.Image) gin.H {
 	variants := []gin.H{}
 	for _, v := range img.Variants {
 		url := v.PublicURL
-		if cfg.API.Mode == "local" || url == "" {
+		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
+			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, v.Variant)
+		} else if cfg.API.Mode == "local" || url == "" {
 			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format)
 		}
 		variants = append(variants, gin.H{
