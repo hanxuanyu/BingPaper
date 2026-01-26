@@ -20,6 +20,7 @@ type Config struct {
 	Admin     AdminConfig     `mapstructure:"admin"`
 	Token     TokenConfig     `mapstructure:"token"`
 	Feature   FeatureConfig   `mapstructure:"feature"`
+	Web       WebConfig       `mapstructure:"web"`
 }
 
 type ServerConfig struct {
@@ -89,6 +90,10 @@ type FeatureConfig struct {
 	WriteDailyFiles bool `mapstructure:"write_daily_files"`
 }
 
+type WebConfig struct {
+	Path string `mapstructure:"path"`
+}
+
 // Bing 默认配置 (内置)
 const (
 	BingMkt     = "zh-CN"
@@ -125,6 +130,7 @@ func Init(configPath string) error {
 	v.SetDefault("storage.local.root", "data/picture")
 	v.SetDefault("token.default_ttl", "168h")
 	v.SetDefault("feature.write_daily_files", true)
+	v.SetDefault("web.path", "web")
 	v.SetDefault("admin.password_bcrypt", "$2a$10$fYHPeWHmwObephJvtlyH1O8DIgaLk5TINbi9BOezo2M8cSjmJchka") // 默认密码: admin123
 
 	if err := v.ReadInConfig(); err != nil {
@@ -176,6 +182,7 @@ func SaveConfig(cfg *Config) error {
 	v.Set("admin", cfg.Admin)
 	v.Set("token", cfg.Token)
 	v.Set("feature", cfg.Feature)
+	v.Set("web", cfg.Web)
 	return v.WriteConfig()
 }
 

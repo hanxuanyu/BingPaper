@@ -45,3 +45,6 @@ token:
 
 feature:
   write_daily_files: true
+
+web:
+  path: web

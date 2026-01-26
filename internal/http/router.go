@@ -1,9 +1,15 @@
 package http
 
 import (
+	"net/http"
+	"os"
+	"path/filepath"
+
 	_ "BingPaper/docs"
+	"BingPaper/internal/config"
 	"BingPaper/internal/http/handlers"
 	"BingPaper/internal/http/middleware"
+	"BingPaper/web"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -18,9 +24,28 @@ func SetupRouter() *gin.Engine {
 
 	// 静态文件
 	r.Static("/static", "./static")
-	r.StaticFile("/", "./web/index.html")
-	r.StaticFile("/admin", "./web/index.html")
-	r.StaticFile("/login", "./web/index.html")
+
+	webPath := config.GetConfig().Web.Path
+	indexPath := filepath.Join(webPath, "index.html")
+
+	serveIndex := func(c *gin.Context) {
+		// 1. 优先尝试从配置的路径读取
+		if _, err := os.Stat(indexPath); err == nil {
+			c.File(indexPath)
+			return
+		}
+		// 2. 如果外部文件不存在，则使用内置嵌入的文件
+		data, err := web.FS.ReadFile("index.html")
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "web files not found"})
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+	}
+
+	r.GET("/", serveIndex)
+	r.GET("/admin", serveIndex)
+	r.GET("/login", serveIndex)
 
 	api := r.Group("/api/v1")
 	{
