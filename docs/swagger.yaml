@@ -1,0 +1,532 @@
+basePath: /api/v1
+definitions:
+  config.APIConfig:
+    properties:
+      mode:
+        description: local | redirect
+        type: string
+    type: object
+  config.AdminConfig:
+    properties:
+      passwordBcrypt:
+        type: string
+    type: object
+  config.Config:
+    properties:
+      admin:
+        $ref: '#/definitions/config.AdminConfig'
+      api:
+        $ref: '#/definitions/config.APIConfig'
+      cron:
+        $ref: '#/definitions/config.CronConfig'
+      db:
+        $ref: '#/definitions/config.DBConfig'
+      feature:
+        $ref: '#/definitions/config.FeatureConfig'
+      log:
+        $ref: '#/definitions/config.LogConfig'
+      retention:
+        $ref: '#/definitions/config.RetentionConfig'
+      server:
+        $ref: '#/definitions/config.ServerConfig'
+      storage:
+        $ref: '#/definitions/config.StorageConfig'
+      token:
+        $ref: '#/definitions/config.TokenConfig'
+    type: object
+  config.CronConfig:
+    properties:
+      dailySpec:
+        type: string
+      enabled:
+        type: boolean
+    type: object
+  config.DBConfig:
+    properties:
+      dsn:
+        type: string
+      type:
+        description: sqlite/mysql/postgres
+        type: string
+    type: object
+  config.FeatureConfig:
+    properties:
+      writeDailyFiles:
+        type: boolean
+    type: object
+  config.LocalConfig:
+    properties:
+      root:
+        type: string
+    type: object
+  config.LogConfig:
+    properties:
+      level:
+        type: string
+    type: object
+  config.RetentionConfig:
+    properties:
+      days:
+        type: integer
+    type: object
+  config.S3Config:
+    properties:
+      accessKey:
+        type: string
+      bucket:
+        type: string
+      endpoint:
+        type: string
+      forcePathStyle:
+        type: boolean
+      publicURLPrefix:
+        type: string
+      region:
+        type: string
+      secretKey:
+        type: string
+    type: object
+  config.ServerConfig:
+    properties:
+      baseURL:
+        type: string
+      port:
+        type: integer
+    type: object
+  config.StorageConfig:
+    properties:
+      local:
+        $ref: '#/definitions/config.LocalConfig'
+      s3:
+        $ref: '#/definitions/config.S3Config'
+      type:
+        description: local/s3/webdav
+        type: string
+      webDAV:
+        $ref: '#/definitions/config.WebDAVConfig'
+    type: object
+  config.TokenConfig:
+    properties:
+      defaultTTL:
+        type: string
+    type: object
+  config.WebDAVConfig:
+    properties:
+      password:
+        type: string
+      publicURLPrefix:
+        type: string
+      url:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.CreateTokenRequest:
+    properties:
+      expires_at:
+        description: optional
+        type: string
+      expires_in:
+        description: optional, e.g. 168h
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
+  handlers.ManualFetchRequest:
+    properties:
+      "n":
+        type: integer
+    type: object
+  handlers.UpdateTokenRequest:
+    properties:
+      disabled:
+        type: boolean
+    type: object
+  model.Token:
+    properties:
+      created_at:
+        type: string
+      disabled:
+        type: boolean
+      expires_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      token:
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 必应每日一图抓取、存储、管理与公共 API 服务。
+  title: BingDailyImage API
+  version: "1.0"
+paths:
+  /admin/cleanup:
+    post:
+      description: 立即启动旧图片清理任务
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 手动触发清理
+      tags:
+      - admin
+  /admin/config:
+    get:
+      description: 获取服务的当前运行配置 (脱敏)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/config.Config'
+      security:
+      - BearerAuth: []
+      summary: 获取当前配置
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: 在线更新服务配置并保存
+      parameters:
+      - description: 配置对象
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/config.Config'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/config.Config'
+      security:
+      - BearerAuth: []
+      summary: 更新配置
+      tags:
+      - admin
+  /admin/fetch:
+    post:
+      consumes:
+      - application/json
+      description: 立即启动抓取 Bing 任务
+      parameters:
+      - description: 抓取天数
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/handlers.ManualFetchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 手动触发抓取
+      tags:
+      - admin
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用密码登录并获取临时 Token
+      parameters:
+      - description: 登录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Token'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 管理员登录
+      tags:
+      - admin
+  /admin/tokens:
+    get:
+      description: 获取所有已创建的 API Token 列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Token'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: 获取 Token 列表
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的 API Token
+      parameters:
+      - description: 创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Token'
+      security:
+      - BearerAuth: []
+      summary: 创建 Token
+      tags:
+      - admin
+  /admin/tokens/{id}:
+    delete:
+      description: 永久删除指定的 API Token
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除 Token
+      tags:
+      - admin
+    patch:
+      consumes:
+      - application/json
+      description: 启用或禁用指定的 API Token
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新 Token 状态
+      tags:
+      - admin
+  /image/date/{date}:
+    get:
+      description: 根据日期返回图片流或重定向 (yyyy-mm-dd)
+      parameters:
+      - description: 日期 (yyyy-mm-dd)
+        in: path
+        name: date
+        required: true
+        type: string
+      - default: UHD
+        description: 分辨率
+        in: query
+        name: variant
+        type: string
+      - default: jpg
+        description: 格式
+        in: query
+        name: format
+        type: string
+      produces:
+      - image/jpeg
+      - image/webp
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: 获取指定日期图片
+      tags:
+      - image
+  /image/date/{date}/meta:
+    get:
+      description: 根据日期获取图片元数据 (yyyy-mm-dd)
+      parameters:
+      - description: 日期 (yyyy-mm-dd)
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取指定日期图片元数据
+      tags:
+      - image
+  /image/random:
+    get:
+      description: 随机返回一张已抓取的图片流或重定向
+      parameters:
+      - default: UHD
+        description: 分辨率
+        in: query
+        name: variant
+        type: string
+      - default: jpg
+        description: 格式
+        in: query
+        name: format
+        type: string
+      produces:
+      - image/jpeg
+      - image/webp
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: 获取随机图片
+      tags:
+      - image
+  /image/random/meta:
+    get:
+      description: 随机获取一张已抓取图片的元数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取随机图片元数据
+      tags:
+      - image
+  /image/today:
+    get:
+      description: 根据参数返回今日必应图片流或重定向
+      parameters:
+      - default: UHD
+        description: 分辨率 (UHD, 1920x1080, 1366x768)
+        in: query
+        name: variant
+        type: string
+      - default: jpg
+        description: 格式 (jpg, webp)
+        in: query
+        name: format
+        type: string
+      produces:
+      - image/jpeg
+      - image/webp
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      summary: 获取今日图片
+      tags:
+      - image
+  /image/today/meta:
+    get:
+      description: 获取今日必应图片的标题、版权等元数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取今日图片元数据
+      tags:
+      - image
+  /images:
+    get:
+      description: 分页获取已抓取的图片元数据列表
+      parameters:
+      - default: 30
+        description: 限制数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      summary: 获取图片列表
+      tags:
+      - image
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

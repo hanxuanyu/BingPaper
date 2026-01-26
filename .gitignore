@@ -1,0 +1,55 @@
+# =========================
+# Go .gitignore (lean)
+# =========================
+
+# Binaries and build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+*.out
+*.test
+
+# Build outputs
+/bin/
+/dist/
+/build/
+/out/
+
+# Go workspace files
+/go.work
+/go.work.sum
+
+# Coverage
+coverage.out
+cover.out
+*.coverprofile
+
+# Vendor (enable if you do not commit vendor/)
+# /vendor/
+
+# IDE / editor
+.idea/
+.vscode/
+*.code-workspace
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Vim / Emacs
+*~
+\#*\#
+.\#*
+# Data
+/data/
+/picture/
+/config.yaml
+/bing_daily_image.db
+/req.txt
+/BingDailyImage

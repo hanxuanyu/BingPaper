@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingDailyImage - 必应每日一图</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --danger-color: #dc3545;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background: var(--bg-color); color: var(--text-color); line-height: 1.6; }
+        nav { background: #333; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        nav a { color: white; text-decoration: none; margin-left: 1.5rem; font-weight: 500; }
+        nav .logo { font-size: 1.5rem; font-weight: bold; margin-left: 0; }
+        
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .hidden { display: none !important; }
+
+        /* Gallery Styles */
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .gallery-item { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: #eee; aspect-ratio: 16 / 9; transition: transform 0.3s ease; }
+        .gallery-item:hover { transform: translateY(-5px); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .gallery-item .overlay { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: linear-gradient(transparent, rgba(0,0,0,0.8)); 
+            color: white; padding: 20px 15px 10px; 
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .gallery-item:hover .overlay { opacity: 1; }
+        .gallery-item .title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+        .gallery-item .copyright { font-size: 0.85rem; opacity: 0.9; }
+        .gallery-item .date { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+
+        /* Info Section */
+        .info-card { background: var(--card-bg); padding: 2rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        code { background: #f1f1f1; padding: 2px 5px; border-radius: 4px; color: #e83e8c; }
+        pre { background: #f1f1f1; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+
+        /* Admin/Login Form Styles */
+        .form-card { max-width: 400px; margin: 5rem auto; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .form-card h2 { margin-top: 0; text-align: center; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; background: var(--primary-color); color: white; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #0069d9; }
+        button.danger { background: var(--danger-color); }
+        button.danger:hover { background: #c82333; }
+        button.secondary { background: #6c757d; margin-top: 10px; }
+
+        /* Admin Panel Styles */
+        .admin-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 768px) { .admin-grid { grid-template-columns: 2fr 1fr; } }
+        .admin-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .status-enabled { background: #d4edda; color: #155724; }
+        .status-disabled { background: #f8d7da; color: #721c24; }
+
+        .loading { text-align: center; padding: 3rem; font-size: 1.2rem; color: #666; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="logo">BingDailyImage</a>
+    <div>
+        <a href="/">首页</a>
+        <a href="/admin">管理</a>
+        <span id="nav-logout-container" class="hidden">
+            <a href="#" onclick="logout()">退出</a>
+        </span>
+    </div>
+</nav>
+
+<div id="content-home" class="container hidden">
+    <div class="info-card">
+        <h2>使用说明</h2>
+        <p>这是一个自动抓取必应每日一图并提供多分辨率管理的工具。您可以直接通过以下接口获取图片：</p>
+        <ul>
+            <li>今日图片：<code>/api/v1/image/today</code></li>
+            <li>今日元数据：<code>/api/v1/image/today/meta</code></li>
+            <li>随机图片：<code>/api/v1/image/random</code></li>
+            <li>指定日期：<code>/api/v1/image/date/2026-01-26</code></li>
+        </ul>
+        <p>参数支持：<code>variant=UHD|1920x1080|1366x768</code>，<code>format=jpg|webp</code>。</p>
+    </div>
+    <div id="gallery" class="gallery">
+        <div class="loading">正在加载图片...</div>
+    </div>
+</div>
+
+<div id="content-login" class="container hidden">
+    <div class="form-card">
+        <h2>管理员登录</h2>
+        <input type="password" id="login-password" placeholder="请输入管理员密码" onkeypress="if(event.keyCode==13) login()">
+        <button onclick="login()">登录</button>
+    </div>
+</div>
+
+<div id="content-admin" class="container hidden">
+    <div class="admin-grid">
+        <div class="left-col">
+            <div class="admin-card">
+                <h3>Token 管理</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>名称</th>
+                            <th>过期时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="token-list"></tbody>
+                </table>
+                <h4 style="margin-top: 2rem;">创建新 Token</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="token-name" placeholder="Token 名称" style="margin: 0;">
+                    <button onclick="createToken()" style="width: auto; padding: 0 20px;">创建</button>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h3>配置文件</h3>
+                <pre id="config-view"></pre>
+                <button class="secondary" onclick="loadConfig()">刷新配置</button>
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="admin-card">
+                <h3>任务控制</h3>
+                <button onclick="triggerFetch()" style="margin-bottom: 10px;">手动抓取 (最近8天)</button>
+                <button class="secondary" onclick="triggerCleanup()" style="margin-bottom: 10px;">手动清理旧图</button>
+            </div>
+            
+            <div class="admin-card">
+                <h3>今日图预览</h3>
+                <div id="today-preview" style="text-align: center;">
+                    <div class="loading" style="padding: 1rem;">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let token = localStorage.getItem('bing_token');
+
+    // 简易路由实现
+    function router() {
+        const path = window.location.pathname;
+        const homeSection = document.getElementById('content-home');
+        const loginSection = document.getElementById('content-login');
+        const adminSection = document.getElementById('content-admin');
+        const logoutNav = document.getElementById('nav-logout-container');
+
+        // 隐藏所有
+        [homeSection, loginSection, adminSection].forEach(s => s.classList.add('hidden'));
+        logoutNav.classList.add('hidden');
+
+        if (path === '/' || path === '') {
+            homeSection.classList.remove('hidden');
+            loadGallery();
+        } else if (path === '/login') {
+            if (token) {
+                window.history.pushState({}, '', '/admin');
+                router();
+                return;
+            }
+            loginSection.classList.remove('hidden');
+        } else if (path === '/admin') {
+            if (!token) {
+                window.history.pushState({}, '', '/login');
+                router();
+                return;
+            }
+            adminSection.classList.remove('hidden');
+            logoutNav.classList.remove('hidden');
+            loadAdminData();
+        } else {
+            // 404 默认首页
+            window.history.pushState({}, '', '/');
+            router();
+        }
+    }
+
+    // 处理导航点击
+    document.querySelectorAll('nav a').forEach(a => {
+        if (a.onclick) return;
+        a.addEventListener('click', e => {
+            if (a.getAttribute('href').startsWith('http')) return;
+            e.preventDefault();
+            const href = a.getAttribute('href');
+            window.history.pushState({}, '', href);
+            router();
+        });
+    });
+
+    // 监听后退/前进
+    window.addEventListener('popstate', router);
+
+    async function login() {
+        const password = document.getElementById('login-password').value;
+        try {
+            const resp = await fetch('/api/v1/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await resp.json();
+            if (data.token) {
+                token = data.token;
+                localStorage.setItem('bing_token', token);
+                window.history.pushState({}, '', '/admin');
+                router();
+            } else {
+                alert('登录失败: ' + (data.error || '未知错误'));
+            }
+        } catch (e) {
+            alert('网络请求失败');
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('bing_token');
+        token = null;
+        window.history.pushState({}, '', '/');
+        router();
+    }
+
+    // 画廊功能
+    async function loadGallery() {
+        const gallery = document.getElementById('gallery');
+        try {
+            const resp = await fetch('/api/v1/images?limit=30');
+            const data = await resp.json();
+            
+            if (data.length === 0) {
+                gallery.innerHTML = '<div class="loading">暂无图片，请稍后再试。</div>';
+                return;
+            }
+
+            gallery.innerHTML = data.map(img => `
+                <div class="gallery-item">
+                    <div class="date">${img.date}</div>
+                    <img src="${img.variants.find(v => v.variant === '1920x1080')?.url || img.variants[0].url}" alt="${img.title}" loading="lazy">
+                    <div class="overlay">
+                        <div class="title">${img.title}</div>
+                        <div class="copyright">${img.copyright}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            gallery.innerHTML = '<div class="loading">加载失败，请刷新重试。</div>';
+        }
+    }
+
+    // 管理员数据
+    function loadAdminData() {
+        loadTokens();
+        loadConfig();
+        loadTodayPreview();
+    }
+
+    async function loadTokens() {
+        const resp = await fetch('/api/v1/admin/tokens', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (resp.status === 401) return logout();
+        const data = await resp.json();
+        const tbody = document.getElementById('token-list');
+        tbody.innerHTML = data.map(t => `
+            <tr>
+                <td>${t.name}</td>
+                <td>${new Date(t.expires_at).toLocaleString()}</td>
+                <td><span class="status-badge ${t.disabled ? 'status-disabled' : 'status-enabled'}">${t.disabled ? '禁用' : '启用'}</span></td>
+                <td>
+                    <button style="width:auto; padding:5px 10px; margin-right:5px;" onclick="toggleToken(${t.id}, ${!t.disabled})">${t.disabled ? '启用' : '禁用'}</button>
+                    <button class="danger" style="width:auto; padding:5px 10px;" onclick="deleteToken(${t.id})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadConfig() {
+        const resp = await fetch('/api/v1/admin/config', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        document.getElementById('config-view').innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function loadTodayPreview() {
+        const resp = await fetch('/api/v1/image/today/meta');
+        const data = await resp.json();
+        const container = document.getElementById('today-preview');
+        container.innerHTML = `
+            <p><strong>${data.date}</strong></p>
+            <p>${data.title}</p>
+            <img src="${data.variants[0].url}" style="max-width:100%; border-radius:8px;">
+        `;
+    }
+
+    async function createToken() {
+        const name = document.getElementById('token-name').value;
+        if (!name) return alert('请输入名称');
+        await fetch('/api/v1/admin/tokens', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        document.getElementById('token-name').value = '';
+        loadTokens();
+    }
+
+    async function toggleToken(id, disabled) {
+        await fetch('/api/v1/admin/tokens/' + id, {
+            method: 'PATCH',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ disabled })
+        });
+        loadTokens();
+    }
+
+    async function deleteToken(id) {
+        if (!confirm('确定删除?')) return;
+        await fetch('/api/v1/admin/tokens/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        loadTokens();
+    }
+
+    async function triggerFetch() {
+        await fetch('/api/v1/admin/fetch', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ n: 8 })
+        });
+        alert('抓取任务已启动');
+    }
+
+    async function triggerCleanup() {
+        await fetch('/api/v1/admin/cleanup', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        alert('清理任务已启动');
+    }
+
+    // 初始化
+    router();
+</script>
+
+</body>
+</html>

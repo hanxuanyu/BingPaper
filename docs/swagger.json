@@ -1,0 +1,824 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "必应每日一图抓取、存储、管理与公共 API 服务。",
+        "title": "BingDailyImage API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/admin/cleanup": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "立即启动旧图片清理任务",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "手动触发清理",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取服务的当前运行配置 (脱敏)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "获取当前配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/config.Config"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "在线更新服务配置并保存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "更新配置",
+                "parameters": [
+                    {
+                        "description": "配置对象",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/config.Config"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/config.Config"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/fetch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "立即启动抓取 Bing 任务",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "手动触发抓取",
+                "parameters": [
+                    {
+                        "description": "抓取天数",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ManualFetchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/login": {
+            "post": {
+                "description": "使用密码登录并获取临时 Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "管理员登录",
+                "parameters": [
+                    {
+                        "description": "登录请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Token"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tokens": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取所有已创建的 API Token 列表",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "获取 Token 列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Token"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建一个新的 API Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "创建 Token",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Token"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tokens/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "永久删除指定的 API Token",
+                "tags": [
+                    "admin"
+                ],
+                "summary": "删除 Token",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "启用或禁用指定的 API Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "更新 Token 状态",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/image/date/{date}": {
+            "get": {
+                "description": "根据日期返回图片流或重定向 (yyyy-mm-dd)",
+                "produces": [
+                    "image/jpeg",
+                    "image/webp"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取指定日期图片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "日期 (yyyy-mm-dd)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "UHD",
+                        "description": "分辨率",
+                        "name": "variant",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "jpg",
+                        "description": "格式",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/image/date/{date}/meta": {
+            "get": {
+                "description": "根据日期获取图片元数据 (yyyy-mm-dd)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取指定日期图片元数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "日期 (yyyy-mm-dd)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/image/random": {
+            "get": {
+                "description": "随机返回一张已抓取的图片流或重定向",
+                "produces": [
+                    "image/jpeg",
+                    "image/webp"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取随机图片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "UHD",
+                        "description": "分辨率",
+                        "name": "variant",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "jpg",
+                        "description": "格式",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/image/random/meta": {
+            "get": {
+                "description": "随机获取一张已抓取图片的元数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取随机图片元数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/image/today": {
+            "get": {
+                "description": "根据参数返回今日必应图片流或重定向",
+                "produces": [
+                    "image/jpeg",
+                    "image/webp"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取今日图片",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "UHD",
+                        "description": "分辨率 (UHD, 1920x1080, 1366x768)",
+                        "name": "variant",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "jpg",
+                        "description": "格式 (jpg, webp)",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/image/today/meta": {
+            "get": {
+                "description": "获取今日必应图片的标题、版权等元数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取今日图片元数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/images": {
+            "get": {
+                "description": "分页获取已抓取的图片元数据列表",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取图片列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "限制数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "config.APIConfig": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "local | redirect",
+                    "type": "string"
+                }
+            }
+        },
+        "config.AdminConfig": {
+            "type": "object",
+            "properties": {
+                "passwordBcrypt": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.Config": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "$ref": "#/definitions/config.AdminConfig"
+                },
+                "api": {
+                    "$ref": "#/definitions/config.APIConfig"
+                },
+                "cron": {
+                    "$ref": "#/definitions/config.CronConfig"
+                },
+                "db": {
+                    "$ref": "#/definitions/config.DBConfig"
+                },
+                "feature": {
+                    "$ref": "#/definitions/config.FeatureConfig"
+                },
+                "log": {
+                    "$ref": "#/definitions/config.LogConfig"
+                },
+                "retention": {
+                    "$ref": "#/definitions/config.RetentionConfig"
+                },
+                "server": {
+                    "$ref": "#/definitions/config.ServerConfig"
+                },
+                "storage": {
+                    "$ref": "#/definitions/config.StorageConfig"
+                },
+                "token": {
+                    "$ref": "#/definitions/config.TokenConfig"
+                }
+            }
+        },
+        "config.CronConfig": {
+            "type": "object",
+            "properties": {
+                "dailySpec": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "config.DBConfig": {
+            "type": "object",
+            "properties": {
+                "dsn": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "sqlite/mysql/postgres",
+                    "type": "string"
+                }
+            }
+        },
+        "config.FeatureConfig": {
+            "type": "object",
+            "properties": {
+                "writeDailyFiles": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "config.LocalConfig": {
+            "type": "object",
+            "properties": {
+                "root": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.LogConfig": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.RetentionConfig": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer"
+                }
+            }
+        },
+        "config.S3Config": {
+            "type": "object",
+            "properties": {
+                "accessKey": {
+                    "type": "string"
+                },
+                "bucket": {
+                    "type": "string"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "forcePathStyle": {
+                    "type": "boolean"
+                },
+                "publicURLPrefix": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "secretKey": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.ServerConfig": {
+            "type": "object",
+            "properties": {
+                "baseURL": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                }
+            }
+        },
+        "config.StorageConfig": {
+            "type": "object",
+            "properties": {
+                "local": {
+                    "$ref": "#/definitions/config.LocalConfig"
+                },
+                "s3": {
+                    "$ref": "#/definitions/config.S3Config"
+                },
+                "type": {
+                    "description": "local/s3/webdav",
+                    "type": "string"
+                },
+                "webDAV": {
+                    "$ref": "#/definitions/config.WebDAVConfig"
+                }
+            }
+        },
+        "config.TokenConfig": {
+            "type": "object",
+            "properties": {
+                "defaultTTL": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.WebDAVConfig": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "publicURLPrefix": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreateTokenRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "expires_at": {
+                    "description": "optional",
+                    "type": "string"
+                },
+                "expires_in": {
+                    "description": "optional, e.g. 168h",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.ManualFetchRequest": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.UpdateTokenRequest": {
+            "type": "object",
+            "properties": {
+                "disabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.Token": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "disabled": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
