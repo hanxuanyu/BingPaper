@@ -1,7 +1,9 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"mime"
 
 	"BingPaper/internal/bootstrap"
 	"BingPaper/internal/config"
@@ -9,6 +11,9 @@ import (
 
 	"go.uber.org/zap"
 )
+
+//go:embed all:web
+var webFS embed.FS
 
 // @title BingPaper API
 // @version 1.0
@@ -21,8 +26,13 @@ import (
 // @name Authorization
 
 func main() {
+	// 注册常用 MIME 类型，确保嵌入式资源能被正确识别
+	mime.AddExtensionType(".js", "application/javascript")
+	mime.AddExtensionType(".css", "text/css")
+	mime.AddExtensionType(".svg", "image/svg+xml")
+
 	// 1. 初始化
-	r := bootstrap.Init()
+	r := bootstrap.Init(webFS)
 
 	// 2. 输出欢迎信息
 	bootstrap.LogWelcomeInfo()

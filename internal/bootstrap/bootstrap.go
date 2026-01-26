@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -22,7 +23,7 @@ import (
 )
 
 // Init 初始化应用各项服务
-func Init() *gin.Engine {
+func Init(webFS embed.FS) *gin.Engine {
 	// 0. 确保数据目录存在
 	_ = os.MkdirAll("data/picture", 0755)
 
@@ -80,7 +81,7 @@ func Init() *gin.Engine {
 	}()
 
 	// 7. 设置路由
-	return http.SetupRouter()
+	return http.SetupRouter(webFS)
 }
 
 // LogWelcomeInfo 输出欢迎信息和快速跳转地址

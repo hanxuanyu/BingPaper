@@ -1,22 +1,25 @@
 package http
 
 import (
+	"embed"
+	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "BingPaper/docs"
 	"BingPaper/internal/config"
 	"BingPaper/internal/http/handlers"
 	"BingPaper/internal/http/middleware"
-	"BingPaper/web"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(webFS embed.FS) *gin.Engine {
 	r := gin.Default()
 
 	// Swagger
@@ -24,28 +27,6 @@ func SetupRouter() *gin.Engine {
 
 	// 静态文件
 	r.Static("/static", "./static")
-
-	webPath := config.GetConfig().Web.Path
-	indexPath := filepath.Join(webPath, "index.html")
-
-	serveIndex := func(c *gin.Context) {
-		// 1. 优先尝试从配置的路径读取
-		if _, err := os.Stat(indexPath); err == nil {
-			c.File(indexPath)
-			return
-		}
-		// 2. 如果外部文件不存在，则使用内置嵌入的文件
-		data, err := web.FS.ReadFile("index.html")
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "web files not found"})
-			return
-		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", data)
-	}
-
-	r.GET("/", serveIndex)
-	r.GET("/admin", serveIndex)
-	r.GET("/login", serveIndex)
 
 	api := r.Group("/api/v1")
 	{
@@ -85,6 +66,71 @@ func SetupRouter() *gin.Engine {
 			}
 		}
 	}
+
+	// 静态资源服务与 SPA 路由 (放在最后，确保 API 路由优先)
+	webSub, _ := fs.Sub(webFS, "web")
+
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// 如果请求的是 API 或 Swagger，则不处理静态资源 (让其返回 404)
+		if strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/swagger") {
+			return
+		}
+
+		// 辅助函数：尝试从外部或嵌入服务文件
+		serveFile := func(relPath string, allowExternal bool) bool {
+			// 1. 优先尝试外部路径
+			webPath := config.GetConfig().Web.Path
+			if allowExternal && webPath != "" {
+				fullPath := filepath.Join(webPath, relPath)
+				if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
+					c.File(fullPath)
+					return true
+				}
+			}
+
+			// 2. 尝试嵌入式文件
+			f, err := webSub.Open(relPath)
+			if err == nil {
+				defer f.Close()
+				stat, err := f.Stat()
+				if err == nil && !stat.IsDir() {
+					if rs, ok := f.(io.ReadSeeker); ok {
+						http.ServeContent(c.Writer, c.Request, stat.Name(), stat.ModTime(), rs)
+						return true
+					}
+					// 兜底：直接读取并输出
+					data, err := io.ReadAll(f)
+					if err == nil {
+						c.Data(http.StatusOK, "", data)
+						return true
+					}
+				}
+			}
+			return false
+		}
+
+		// 1. 尝试直接请求的文件 (如果是 / 则尝试 index.html)
+		requestedPath := strings.TrimPrefix(path, "/")
+		if requestedPath == "" {
+			requestedPath = "index.html"
+		}
+
+		if serveFile(requestedPath, true) {
+			return
+		}
+
+		// 2. SPA 支持：对于非文件请求（没有后缀或不包含点），尝试返回 index.html
+		isAsset := strings.Contains(requestedPath, ".")
+		if !isAsset || requestedPath == "index.html" {
+			if serveFile("index.html", true) {
+				return
+			}
+		}
+
+		c.Status(http.StatusNotFound)
+	})
 
 	return r
 }
