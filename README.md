@@ -90,12 +90,23 @@ go run .
 
 编译后的打包文件将生成在 `output` 目录下。二进制文件已内置默认前端页面，即使不带 `web` 目录也能运行。如果需要自定义页面，可在配置中指定 `web.path`。
 
-### 发布流程
-本项目集成了 GitHub Actions，可通过以下步骤发布新版本：
+### 版本发布 (仅限维护者)
+如果您是项目的维护者，可以通过以下步骤发布新版本：
 
 1. 确保在 `master` 分支且代码已提交。
 2. 运行标签脚本：`./scripts/tag.sh v1.0.0` (替换为实际版本号)。
 3. 脚本会自动推送标签，触发 GitHub Actions 进行构建并发布 Release。
+
+## 贡献指南
+
+我们非常欢迎各种形式的贡献！如果您有任何想法或建议，请遵循以下流程：
+
+1. **Fork** 本仓库到您的 GitHub 账号。
+2. **Clone** 您 Fork 的仓库到本地。
+3. 创建一个新的 **Feature 分支** (`git checkout -b feature/your-feature`)。
+4. **提交** 您的修改 (`git commit -m 'Add some feature'`)。
+5. **Push** 分支到 GitHub (`git push origin feature/your-feature`)。
+6. 在本仓库提交一个 **Pull Request**。
 
 ### Docker 运行
 
