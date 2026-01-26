@@ -97,10 +97,25 @@ go run .
 2. 运行标签脚本：`./scripts/tag.sh v1.0.0` (替换为实际版本号)。
 3. 脚本会自动推送标签，触发 GitHub Actions 进行构建并发布 Release。
 
-### Docker 构建
+### Docker 运行
 ```bash
 docker build -t bing-paper .
+docker run -d -p 8080:8080 -v $(pwd)/data:/app/data bing-paper
 ```
+
+### Docker Compose (推荐)
+使用项目根目录下的 `docker-compose.yml` 快速启动：
+
+```bash
+docker-compose up -d
+```
+
+你可以通过修改 `docker-compose.yml` 中的 `environment` 部分来覆盖默认配置，例如：
+- `BINGPAPER_SERVER_PORT`: 服务端口
+- `BINGPAPER_API_MODE`: API 模式 (`local` 或 `redirect`)
+- `BINGPAPER_DB_TYPE`: 数据库类型 (`sqlite`, `mysql`, `postgres`)
+- `BINGPAPER_STORAGE_TYPE`: 存储类型 (`local`, `s3`, `webdav`)
+- `BINGPAPER_ADMIN_PASSWORD_BCRYPT`: 管理员密码的 Bcrypt 哈希值
 
 ## 许可证
 

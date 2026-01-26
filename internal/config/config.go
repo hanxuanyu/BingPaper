@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -133,6 +134,11 @@ func Init(configPath string) error {
 	v.SetDefault("feature.write_daily_files", true)
 	v.SetDefault("web.path", "web")
 	v.SetDefault("admin.password_bcrypt", "$2a$10$fYHPeWHmwObephJvtlyH1O8DIgaLk5TINbi9BOezo2M8cSjmJchka") // 默认密码: admin123
+
+	// 绑定环境变量
+	v.SetEnvPrefix("BINGPAPER")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
 		// 如果指定了配置文件但读取失败（且不是找不到文件的错误），或者没指定但也没找到

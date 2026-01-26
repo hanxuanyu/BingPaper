@@ -1,0 +1,31 @@
+services:
+  bingpaper:
+    build: .
+    container_name: bingpaper
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - BINGPAPER_SERVER_PORT=8080
+      - BINGPAPER_LOG_LEVEL=info
+      - BINGPAPER_API_MODE=local
+      - BINGPAPER_CRON_ENABLED=true
+      - BINGPAPER_DB_TYPE=sqlite
+      - BINGPAPER_DB_DSN=data/bing_paper.db
+      - BINGPAPER_STORAGE_TYPE=local
+      - BINGPAPER_STORAGE_LOCAL_ROOT=data/picture
+      - BINGPAPER_RETENTION_DAYS=30
+      # S3 配置 (可选)
+      # - BINGPAPER_STORAGE_S3_ENDPOINT=
+      # - BINGPAPER_STORAGE_S3_REGION=
+      # - BINGPAPER_STORAGE_S3_BUCKET=
+      # - BINGPAPER_STORAGE_S3_ACCESS_KEY=
+      # - BINGPAPER_STORAGE_S3_SECRET_KEY=
+      # - BINGPAPER_STORAGE_S3_PUBLIC_URL_PREFIX=
+      # WebDAV 配置 (可选)
+      # - BINGPAPER_STORAGE_WEBDAV_URL=
+      # - BINGPAPER_STORAGE_WEBDAV_USERNAME=
+      # - BINGPAPER_STORAGE_WEBDAV_PASSWORD=
+      # - BINGPAPER_STORAGE_WEBDAV_PUBLIC_URL_PREFIX=
