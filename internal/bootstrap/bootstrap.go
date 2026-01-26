@@ -6,16 +6,16 @@ import (
 	"log"
 	"os"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/cron"
-	"BingDailyImage/internal/http"
-	"BingDailyImage/internal/repo"
-	"BingDailyImage/internal/service/fetcher"
-	"BingDailyImage/internal/storage"
-	"BingDailyImage/internal/storage/local"
-	"BingDailyImage/internal/storage/s3"
-	"BingDailyImage/internal/storage/webdav"
-	"BingDailyImage/internal/util"
+	"BingPaper/internal/config"
+	"BingPaper/internal/cron"
+	"BingPaper/internal/http"
+	"BingPaper/internal/repo"
+	"BingPaper/internal/service/fetcher"
+	"BingPaper/internal/storage"
+	"BingPaper/internal/storage/local"
+	"BingPaper/internal/storage/s3"
+	"BingPaper/internal/storage/webdav"
+	"BingPaper/internal/util"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -93,7 +93,7 @@ func LogWelcomeInfo() {
 	}
 
 	fmt.Println("\n---------------------------------------------------------")
-	fmt.Println("  BingDailyImage 服务已启动！")
+	fmt.Println("  BingPaper 服务已启动！")
 	fmt.Printf("  - 首页地址:   %s/\n", baseURL)
 	fmt.Printf("  - 管理后台:   %s/admin\n", baseURL)
 	fmt.Printf("  - API 文档:   %s/swagger/index.html\n", baseURL)

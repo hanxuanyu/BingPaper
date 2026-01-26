@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"BingDailyImage/internal/storage"
+	"BingPaper/internal/storage"
 
 	"github.com/studio-b12/gowebdav"
 )

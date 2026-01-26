@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"BingDailyImage/internal/storage"
+	"BingPaper/internal/storage"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"

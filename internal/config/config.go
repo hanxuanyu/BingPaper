@@ -120,7 +120,7 @@ func Init(configPath string) error {
 	v.SetDefault("cron.daily_spec", "0 10 * * *")
 	v.SetDefault("retention.days", 30)
 	v.SetDefault("db.type", "sqlite")
-	v.SetDefault("db.dsn", "data/bing_daily_image.db")
+	v.SetDefault("db.dsn", "data/bing_paper.db")
 	v.SetDefault("storage.type", "local")
 	v.SetDefault("storage.local.root", "data/picture")
 	v.SetDefault("token.default_ttl", "168h")

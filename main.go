@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 
-	"BingDailyImage/internal/bootstrap"
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/util"
+	"BingPaper/internal/bootstrap"
+	"BingPaper/internal/config"
+	"BingPaper/internal/util"
 
 	"go.uber.org/zap"
 )
 
-// @title BingDailyImage API
+// @title BingPaper API
 // @version 1.0
 // @description 必应每日一图抓取、存储、管理与公共 API 服务。
 // @host localhost:8080

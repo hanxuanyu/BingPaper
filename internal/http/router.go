@@ -1,9 +1,9 @@
 package http
 
 import (
-	_ "BingDailyImage/docs"
-	"BingDailyImage/internal/http/handlers"
-	"BingDailyImage/internal/http/middleware"
+	_ "BingPaper/docs"
+	"BingPaper/internal/http/handlers"
+	"BingPaper/internal/http/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -49,6 +49,8 @@ func SetupRouter() *gin.Engine {
 				authorized.POST("/tokens", handlers.CreateToken)
 				authorized.PATCH("/tokens/:id", handlers.UpdateToken)
 				authorized.DELETE("/tokens/:id", handlers.DeleteToken)
+
+				authorized.POST("/password", handlers.ChangePassword)
 
 				authorized.GET("/config", handlers.GetConfig)
 				authorized.PUT("/config", handlers.UpdateConfig)

@@ -1,0 +1,47 @@
+server:
+  port: 8080
+  base_url: ""
+
+log:
+  level: info
+
+api:
+  mode: local # local | redirect
+
+cron:
+  enabled: true
+  daily_spec: "0 10 * * *"
+
+retention:
+  days: 30
+
+db:
+  type: sqlite # sqlite | mysql | postgres
+  dsn: data/bing_paper.db
+
+storage:
+  type: local # local | s3 | webdav
+  local:
+    root: data/picture
+  s3:
+    endpoint: ""
+    region: ""
+    bucket: ""
+    access_key: ""
+    secret_key: ""
+    public_url_prefix: ""
+    force_path_style: false
+  webdav:
+    url: ""
+    username: ""
+    password: ""
+    public_url_prefix: ""
+
+admin:
+  password_bcrypt: "$2a$10$fYHPeWHmwObephJvtlyH1O8DIgaLk5TINbi9BOezo2M8cSjmJchka" # 默认密码: admin123
+
+token:
+  default_ttl: 168h
+
+feature:
+  write_daily_files: true

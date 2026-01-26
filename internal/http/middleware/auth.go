@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"BingDailyImage/internal/service/token"
+	"BingPaper/internal/service/token"
 
 	"github.com/gin-gonic/gin"
 )

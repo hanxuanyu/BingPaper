@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BingDailyImage - 必应每日一图</title>
+    <title>BingPaper - 必应每日一图</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -67,7 +67,7 @@
 <body>
 
 <nav>
-    <a href="/" class="logo">BingDailyImage</a>
+    <a href="/" class="logo">BingPaper</a>
     <div>
         <a href="/">首页</a>
         <a href="/admin">管理</a>
@@ -137,6 +137,13 @@
                 <h3>任务控制</h3>
                 <button onclick="triggerFetch()" style="margin-bottom: 10px;">手动抓取 (最近8天)</button>
                 <button class="secondary" onclick="triggerCleanup()" style="margin-bottom: 10px;">手动清理旧图</button>
+            </div>
+
+            <div class="admin-card">
+                <h3>修改密码</h3>
+                <input type="password" id="old-password" placeholder="旧密码" style="margin-bottom: 10px;">
+                <input type="password" id="new-password" placeholder="新密码" style="margin-bottom: 10px;">
+                <button onclick="changePassword()">提交修改</button>
             </div>
             
             <div class="admin-card">
@@ -352,6 +359,26 @@
             headers: { 'Authorization': 'Bearer ' + token }
         });
         alert('清理任务已启动');
+    }
+
+    async function changePassword() {
+        const oldPassword = document.getElementById('old-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        if (!oldPassword || !newPassword) return alert('请输入完整信息');
+
+        const resp = await fetch('/api/v1/admin/password', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+        });
+
+        const data = await resp.json();
+        if (resp.ok) {
+            alert('密码修改成功，请重新登录');
+            logout();
+        } else {
+            alert('修改失败: ' + (data.error || '未知错误'));
+        }
     }
 
     // 初始化

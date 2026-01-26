@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/model"
-	"BingDailyImage/internal/util"
+	"BingPaper/internal/config"
+	"BingPaper/internal/model"
+	"BingPaper/internal/util"
 	"fmt"
 
 	"go.uber.org/zap"

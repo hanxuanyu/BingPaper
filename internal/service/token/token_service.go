@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/model"
-	"BingDailyImage/internal/repo"
+	"BingPaper/internal/config"
+	"BingPaper/internal/model"
+	"BingPaper/internal/repo"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -51,7 +51,21 @@ func Login(password string) (*model.Token, error) {
 	}
 
 	ttl := config.GetTokenTTL()
-	return CreateToken("login-token", time.Now().Add(ttl))
+	expiresAt := time.Now().Add(ttl)
+	name := "login-token"
+
+	// 如果已存在同名 token，则刷新时间并返回
+	var t model.Token
+	if err := repo.DB.Where("name = ?", name).First(&t).Error; err == nil {
+		t.ExpiresAt = expiresAt
+		t.Disabled = false
+		if err := repo.DB.Save(&t).Error; err != nil {
+			return nil, err
+		}
+		return &t, nil
+	}
+
+	return CreateToken(name, expiresAt)
 }
 
 func ListTokens() ([]model.Token, error) {

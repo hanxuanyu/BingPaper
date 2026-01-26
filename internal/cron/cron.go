@@ -3,10 +3,10 @@ package cron
 import (
 	"context"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/service/fetcher"
-	"BingDailyImage/internal/service/image"
-	"BingDailyImage/internal/util"
+	"BingPaper/internal/config"
+	"BingPaper/internal/service/fetcher"
+	"BingPaper/internal/service/image"
+	"BingPaper/internal/util"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"

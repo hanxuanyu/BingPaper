@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/model"
-	"BingDailyImage/internal/service/image"
-	"BingDailyImage/internal/storage"
+	"BingPaper/internal/config"
+	"BingPaper/internal/model"
+	"BingPaper/internal/service/image"
+	"BingPaper/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )

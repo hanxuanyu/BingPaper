@@ -121,6 +121,16 @@ definitions:
       username:
         type: string
     type: object
+  handlers.ChangePasswordRequest:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
   handlers.CreateTokenRequest:
     properties:
       expires_at:
@@ -172,7 +182,7 @@ host: localhost:8080
 info:
   contact: {}
   description: 必应每日一图抓取、存储、管理与公共 API 服务。
-  title: BingDailyImage API
+  title: BingPaper API
   version: "1.0"
 paths:
   /admin/cleanup:
@@ -281,6 +291,44 @@ paths:
               type: string
             type: object
       summary: 管理员登录
+      tags:
+      - admin
+  /admin/password:
+    post:
+      consumes:
+      - application/json
+      description: 验证旧密码并设置新密码，自动更新配置文件
+      parameters:
+      - description: 修改密码请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 修改管理员密码
       tags:
       - admin
   /admin/tokens:

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/model"
-	"BingDailyImage/internal/repo"
-	"BingDailyImage/internal/storage"
-	"BingDailyImage/internal/util"
+	"BingPaper/internal/config"
+	"BingPaper/internal/model"
+	"BingPaper/internal/repo"
+	"BingPaper/internal/storage"
+	"BingPaper/internal/util"
 
 	"go.uber.org/zap"
 )

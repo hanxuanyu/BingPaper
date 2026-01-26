@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"BingDailyImage/internal/storage"
+	"BingPaper/internal/storage"
 )
 
 type LocalStorage struct {

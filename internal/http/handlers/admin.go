@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"BingDailyImage/internal/config"
-	"BingDailyImage/internal/service/fetcher"
-	"BingDailyImage/internal/service/image"
-	"BingDailyImage/internal/service/token"
+	"BingPaper/internal/config"
+	"BingPaper/internal/service/fetcher"
+	"BingPaper/internal/service/image"
+	"BingPaper/internal/service/token"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type LoginRequest struct {
@@ -107,6 +108,55 @@ func CreateToken(c *gin.Context) {
 
 type UpdateTokenRequest struct {
 	Disabled bool `json:"disabled"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
+// ChangePassword 修改管理员密码
+// @Summary 修改管理员密码
+// @Description 验证旧密码并设置新密码，自动更新配置文件
+// @Tags admin
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body ChangePasswordRequest true "修改密码请求"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /admin/password [post]
+func ChangePassword(c *gin.Context) {
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	cfg := config.GetConfig()
+	// 验证旧密码
+	err := bcrypt.CompareHashAndPassword([]byte(cfg.Admin.PasswordBcrypt), []byte(req.OldPassword))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid old password"})
+		return
+	}
+
+	// 生成新密码 Hash
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	// 更新配置
+	cfg.Admin.PasswordBcrypt = string(hash)
+	if err := config.SaveConfig(cfg); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save config"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "password updated successfully"})
 }
 
 // UpdateToken 更新 Token 状态

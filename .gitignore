@@ -50,6 +50,6 @@ desktop.ini
 /data/
 /picture/
 /config.yaml
-/bing_daily_image.db
+/bing_paper.db
 /req.txt
-/BingDailyImage
+/BingPaper

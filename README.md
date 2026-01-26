@@ -1,4 +1,4 @@
-# BingDailyImage
+# BingPaper
 
 必应每日一图抓取、存储、多分辨率管理与公共 API 服务。
 
@@ -71,10 +71,10 @@ go run .
 
 ```bash
 # 构建二进制
-go build -o BingDailyImage .
+go build -o BingPaper .
 
 # 构建 Docker 镜像
-docker build -t bing-daily-image .
+docker build -t bing-paper .
 ```
 
 ## 许可证
