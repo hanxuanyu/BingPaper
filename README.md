@@ -98,6 +98,17 @@ go run .
 3. 脚本会自动推送标签，触发 GitHub Actions 进行构建并发布 Release。
 
 ### Docker 运行
+
+#### 使用 Docker Hub 镜像 (推荐)
+```bash
+docker run -d \
+  --name bingpaper \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  hxuanyu521/bingpaper:latest
+```
+
+#### 本地构建镜像
 ```bash
 docker build -t bing-paper .
 docker run -d -p 8080:8080 -v $(pwd)/data:/app/data bing-paper
