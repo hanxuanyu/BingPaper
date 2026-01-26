@@ -5,7 +5,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o BingPaper .
+RUN CGO_ENABLED=0 go build -o BingPaper .
 
 FROM alpine:latest
 

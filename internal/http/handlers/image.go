@@ -19,8 +19,8 @@ import (
 // @Description 根据参数返回今日必应图片流或重定向
 // @Tags image
 // @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768)" default(UHD)
-// @Param format query string false "格式 (jpg, webp)" default(jpg)
-// @Produce image/jpeg,image/webp
+// @Param format query string false "格式 (jpg)" default(jpg)
+// @Produce image/jpeg
 // @Success 200 {file} binary
 // @Router /image/today [get]
 func GetToday(c *gin.Context) {
@@ -54,7 +54,7 @@ func GetTodayMeta(c *gin.Context) {
 // @Tags image
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
-// @Produce image/jpeg,image/webp
+// @Produce image/jpeg
 // @Success 200 {file} binary
 // @Router /image/random [get]
 func GetRandom(c *gin.Context) {
@@ -89,7 +89,7 @@ func GetRandomMeta(c *gin.Context) {
 // @Param date path string true "日期 (yyyy-mm-dd)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
-// @Produce image/jpeg,image/webp
+// @Produce image/jpeg
 // @Success 200 {file} binary
 // @Router /image/date/{date} [get]
 func GetByDate(c *gin.Context) {

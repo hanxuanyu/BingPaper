@@ -6,7 +6,7 @@
 
 - **自动抓取**：每日定时抓取 Bing 每日一图，支持 UHD 探测降级。
 - **补抓能力**：支持手动或 API 触发抓取最近 N 天（默认 8 天）的图片。
-- **多分辨率管理**：自动生成 UHD, 1920x1080, 1366x768 等分辨率，支持 WebP 和 JPG 格式。
+- **多分辨率管理**：自动生成 UHD, 1920x1080, 1366x768 等分辨率，支持 JPG 格式。
 - **灵活存储**：支持本地磁盘、S3 对象存储、WebDAV 存储。
 - **数据库支持**：支持 SQLite, MySQL, PostgreSQL。
 - **公共 API**：提供今日图片、随机图片、指定日期图片的纯图及元数据接口。
@@ -53,7 +53,7 @@ go run .
 - `GET /api/v1/image/date/:yyyy-mm-dd`：返回指定日期图片
 - **查询参数**：
   - `variant`：分辨率 (UHD, 1920x1080, 1366x768)，默认 `UHD`
-  - `format`：格式 (jpg, webp)，默认 `jpg`
+  - `format`：格式 (jpg)，默认 `jpg`
 
 ### 管理接口 (需 Bearer Token)
 
@@ -69,11 +69,31 @@ go run .
 
 ## 开发与构建
 
-```bash
-# 构建二进制
-go build -o BingPaper .
+### 本地构建
+您可以使用提供的脚本进行多平台构建：
 
-# 构建 Docker 镜像
+```bash
+# Unix/Linux/macOS
+./scripts/build.sh [version]
+
+# Windows (CMD)
+.\scripts\build.bat [version]
+
+# Windows (PowerShell)
+.\scripts\build.ps1 [version]
+```
+
+编译后的打包文件将生成在 `output` 目录下。
+
+### 发布流程
+本项目集成了 GitHub Actions，可通过以下步骤发布新版本：
+
+1. 确保在 `master` 分支且代码已提交。
+2. 运行标签脚本：`./scripts/tag.sh v1.0.0` (替换为实际版本号)。
+3. 脚本会自动推送标签，触发 GitHub Actions 进行构建并发布 Release。
+
+### Docker 构建
+```bash
 docker build -t bing-paper .
 ```
 

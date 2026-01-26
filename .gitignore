@@ -18,6 +18,7 @@
 /dist/
 /build/
 /out/
+/output/
 
 # Go workspace files
 /go.work

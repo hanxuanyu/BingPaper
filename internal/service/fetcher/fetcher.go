@@ -18,8 +18,6 @@ import (
 	"BingPaper/internal/repo"
 	"BingPaper/internal/storage"
 	"BingPaper/internal/util"
-
-	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
 	"go.uber.org/zap"
 )
@@ -146,19 +144,6 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 			util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
 		}
 
-		// 保存 WebP (可选或默认)
-		webpBuf := new(bytes.Buffer)
-		var webpImg image.Image
-		if v.width == 0 {
-			webpImg = srcImg
-		} else {
-			webpImg = imaging.Fill(srcImg, v.width, v.height, imaging.Center, imaging.Lanczos)
-		}
-		if err := webp.Encode(webpBuf, webpImg, &webp.Options{Quality: 80}); err == nil {
-			if err := f.saveVariant(ctx, &dbImg, v.name, "webp", webpBuf.Bytes()); err != nil {
-				util.Logger.Error("Failed to save webp variant", zap.String("variant", v.name), zap.Error(err))
-			}
-		}
 	}
 
 	// 保存今日额外文件
@@ -220,14 +205,6 @@ func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte) {
 		localRoot = "static"
 	}
 	os.MkdirAll(filepath.Join(localRoot, "static"), 0755)
-
-	// daily.webp (quality 80)
-	webpPath := filepath.Join(localRoot, "static", "daily.webp")
-	fWebp, _ := os.Create(webpPath)
-	if fWebp != nil {
-		webp.Encode(fWebp, srcImg, &webp.Options{Quality: 80})
-		fWebp.Close()
-	}
 
 	// daily.jpeg (quality 95)
 	jpegPath := filepath.Join(localRoot, "static", "daily.jpeg")
