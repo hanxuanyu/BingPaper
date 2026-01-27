@@ -399,8 +399,7 @@ const docTemplate = `{
             "get": {
                 "description": "根据日期返回图片流或重定向 (yyyy-mm-dd)",
                 "produces": [
-                    "image/jpeg",
-                    "image/webp"
+                    "image/jpeg"
                 ],
                 "tags": [
                     "image"
@@ -473,8 +472,7 @@ const docTemplate = `{
             "get": {
                 "description": "随机返回一张已抓取的图片流或重定向",
                 "produces": [
-                    "image/jpeg",
-                    "image/webp"
+                    "image/jpeg"
                 ],
                 "tags": [
                     "image"
@@ -531,8 +529,7 @@ const docTemplate = `{
             "get": {
                 "description": "根据参数返回今日必应图片流或重定向",
                 "produces": [
-                    "image/jpeg",
-                    "image/webp"
+                    "image/jpeg"
                 ],
                 "tags": [
                     "image"
@@ -549,7 +546,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "default": "jpg",
-                        "description": "格式 (jpg, webp)",
+                        "description": "格式 (jpg)",
                         "name": "format",
                         "in": "query"
                     }
@@ -669,6 +666,9 @@ const docTemplate = `{
                 },
                 "token": {
                     "$ref": "#/definitions/config.TokenConfig"
+                },
+                "web": {
+                    "$ref": "#/definitions/config.WebConfig"
                 }
             }
         },
@@ -714,8 +714,44 @@ const docTemplate = `{
         "config.LogConfig": {
             "type": "object",
             "properties": {
+                "compress": {
+                    "description": "是否压缩旧日志文件",
+                    "type": "boolean"
+                },
+                "dbfilename": {
+                    "description": "数据库日志文件名",
+                    "type": "string"
+                },
+                "dblogLevel": {
+                    "description": "数据库日志级别: debug, info, warn, error",
+                    "type": "string"
+                },
+                "filename": {
+                    "description": "业务日志文件名",
+                    "type": "string"
+                },
                 "level": {
                     "type": "string"
+                },
+                "logConsole": {
+                    "description": "是否同时输出到控制台",
+                    "type": "boolean"
+                },
+                "maxAge": {
+                    "description": "保留旧日志文件最大天数",
+                    "type": "integer"
+                },
+                "maxBackups": {
+                    "description": "保留旧日志文件最大个数",
+                    "type": "integer"
+                },
+                "maxSize": {
+                    "description": "每个日志文件最大大小 (MB)",
+                    "type": "integer"
+                },
+                "showDBLog": {
+                    "description": "是否在控制台显示数据库日志",
+                    "type": "boolean"
                 }
             }
         },
@@ -786,6 +822,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "defaultTTL": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.WebConfig": {
+            "type": "object",
+            "properties": {
+                "path": {
                     "type": "string"
                 }
             }

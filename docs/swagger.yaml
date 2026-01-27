@@ -33,6 +33,8 @@ definitions:
         $ref: '#/definitions/config.StorageConfig'
       token:
         $ref: '#/definitions/config.TokenConfig'
+      web:
+        $ref: '#/definitions/config.WebConfig'
     type: object
   config.CronConfig:
     properties:
@@ -61,8 +63,35 @@ definitions:
     type: object
   config.LogConfig:
     properties:
+      compress:
+        description: 是否压缩旧日志文件
+        type: boolean
+      dbfilename:
+        description: 数据库日志文件名
+        type: string
+      dblogLevel:
+        description: '数据库日志级别: debug, info, warn, error'
+        type: string
+      filename:
+        description: 业务日志文件名
+        type: string
       level:
         type: string
+      logConsole:
+        description: 是否同时输出到控制台
+        type: boolean
+      maxAge:
+        description: 保留旧日志文件最大天数
+        type: integer
+      maxBackups:
+        description: 保留旧日志文件最大个数
+        type: integer
+      maxSize:
+        description: 每个日志文件最大大小 (MB)
+        type: integer
+      showDBLog:
+        description: 是否在控制台显示数据库日志
+        type: boolean
     type: object
   config.RetentionConfig:
     properties:
@@ -108,6 +137,11 @@ definitions:
   config.TokenConfig:
     properties:
       defaultTTL:
+        type: string
+    type: object
+  config.WebConfig:
+    properties:
+      path:
         type: string
     type: object
   config.WebDAVConfig:
@@ -443,7 +477,6 @@ paths:
         type: string
       produces:
       - image/jpeg
-      - image/webp
       responses:
         "200":
           description: OK
@@ -488,7 +521,6 @@ paths:
         type: string
       produces:
       - image/jpeg
-      - image/webp
       responses:
         "200":
           description: OK
@@ -521,13 +553,12 @@ paths:
         name: variant
         type: string
       - default: jpg
-        description: 格式 (jpg, webp)
+        description: 格式 (jpg)
         in: query
         name: format
         type: string
       produces:
       - image/jpeg
-      - image/webp
       responses:
         "200":
           description: OK
