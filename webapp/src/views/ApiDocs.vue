@@ -344,19 +344,19 @@
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">copyrightlink</code>
-                <span class="text-white/60">版权详情链接（指向 Bing 搜索页面）⭐ 新增</span>
+                <span class="text-white/60">版权详情链接（指向 Bing 搜索页面）</span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">startdate</code>
-                <span class="text-white/60">发布开始日期（格式：YYYYMMDD）⭐ 新增</span>
+                <span class="text-white/60">发布开始日期（格式：YYYYMMDD）</span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">fullstartdate</code>
-                <span class="text-white/60">完整发布时间（格式：YYYYMMDDHHMM）⭐ 新增</span>
+                <span class="text-white/60">完整发布时间（格式：YYYYMMDDHHMM）</span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">hsh</code>
-                <span class="text-white/60">图片唯一哈希值 ⭐ 新增</span>
+                <span class="text-white/60">图片唯一哈希值 </span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">quiz</code>

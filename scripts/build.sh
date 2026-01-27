@@ -20,6 +20,12 @@ PLATFORMS=(
 # 需要包含的额外文件/目录
 EXTRA_FILES=("web" "config.example.yaml" "README.md")
 
+echo "开始构建前端..."
+cd webapp
+npm install
+npm run build
+cd ..
+
 echo "开始构建 $APP_NAME 多平台二进制文件..."
 
 # 清理 output 目录
@@ -51,7 +57,8 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     mkdir -p "$PACKAGE_DIR"
     
     # 现在已移除 CGO 依赖，使用 CGO_ENABLED=0 以支持轻松的跨平台编译
-    GOOS=$OS GOARCH=$ARCH CGO_ENABLED=0 go build -o "${PACKAGE_DIR}/${BINARY_NAME}" main.go
+    # 增加 -ldflags="-s -w" 以减少二进制体积
+    GOOS=$OS GOARCH=$ARCH CGO_ENABLED=0 go build -ldflags="-s -w" -o "${PACKAGE_DIR}/${BINARY_NAME}" main.go
     
     if [ $? -eq 0 ]; then
         echo "  ${OS}/${ARCH} 编译成功"

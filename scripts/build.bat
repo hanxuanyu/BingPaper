@@ -1,8 +1,21 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: 切换到项目根目录
+cd /d %~dp0..
+
 set APP_NAME=BingPaper
 set OUTPUT_DIR=output
+
+echo 开始构建前端...
+cd webapp
+call npm install
+call npm run build
+if %errorlevel% neq 0 (
+    echo 前端构建失败
+    exit /b %errorlevel%
+)
+cd ..
 
 echo 开始构建 %APP_NAME% 多平台二进制文件...
 
@@ -25,7 +38,10 @@ for %%p in (%PLATFORMS%) do (
         set PACKAGE_DIR=%OUTPUT_DIR%\!OUTPUT_NAME!
         if not exist !PACKAGE_DIR! mkdir !PACKAGE_DIR!
         
-        env GOOS=%%a GOARCH=%%b CGO_ENABLED=0 go build -o !PACKAGE_DIR!\!BINARY_NAME! main.go
+        set GOOS=%%a
+        set GOARCH=%%b
+        set CGO_ENABLED=0
+        go build -ldflags="-s -w" -o !PACKAGE_DIR!\!BINARY_NAME! main.go
         
         if !errorlevel! equ 0 (
             echo   %%a/%%b 编译成功

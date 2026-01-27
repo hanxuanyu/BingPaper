@@ -1,5 +1,20 @@
+# 切换到项目根目录
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+if ($ScriptDir) { Set-Location (Join-Path $ScriptDir "..") }
+
 $AppName = "BingPaper"
 $OutputDir = "output"
+
+Write-Host "开始构建前端..."
+Push-Location webapp
+npm install
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "前端构建失败" -ForegroundColor Red
+    Pop-Location
+    exit $LASTEXITCODE
+}
+Pop-Location
 
 Write-Host "开始构建 $AppName 多平台二进制文件..."
 
@@ -38,7 +53,7 @@ foreach ($Platform in $Platforms) {
     $env:GOOS = $OS
     $env:GOARCH = $Arch
     $env:CGO_ENABLED = "0"
-    go build -o (Join-Path $PackageDir $BinaryName) main.go
+    go build -ldflags="-s -w" -o (Join-Path $PackageDir $BinaryName) main.go
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  $OS/$Arch 编译成功"
