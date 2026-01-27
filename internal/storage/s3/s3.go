@@ -8,42 +8,45 @@ import (
 
 	"BingPaper/internal/storage"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type S3Storage struct {
-	session         *session.Session
-	client          *s3.S3
+	client          *s3.Client
 	bucket          string
 	publicURLPrefix string
 }
 
 func NewS3Storage(endpoint, region, bucket, accessKey, secretKey, publicURLPrefix string, forcePathStyle bool) (*S3Storage, error) {
-	config := &aws.Config{
-		Region:           aws.String(region),
-		Credentials:      credentials.NewStaticCredentials(accessKey, secretKey, ""),
-		Endpoint:         aws.String(endpoint),
-		S3ForcePathStyle: aws.Bool(forcePathStyle),
-	}
-	sess, err := session.NewSession(config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+		o.UsePathStyle = forcePathStyle
+	})
+
 	return &S3Storage{
-		session:         sess,
-		client:          s3.New(sess),
+		client:          client,
 		bucket:          bucket,
 		publicURLPrefix: publicURLPrefix,
 	}, nil
 }
 
 func (s *S3Storage) Put(ctx context.Context, key string, r io.Reader, contentType string) (storage.StoredObject, error) {
-	uploader := s3manager.NewUploader(s.session)
-	output, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
+	uploader := manager.NewUploader(s.client)
+	output, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		Body:        r,
@@ -68,18 +71,22 @@ func (s *S3Storage) Put(ctx context.Context, key string, r io.Reader, contentTyp
 }
 
 func (s *S3Storage) Get(ctx context.Context, key string) (io.ReadCloser, string, error) {
-	output, err := s.client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	output, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
 		return nil, "", err
 	}
-	return output.Body, aws.StringValue(output.ContentType), nil
+	contentType := ""
+	if output.ContentType != nil {
+		contentType = *output.ContentType
+	}
+	return output.Body, contentType, nil
 }
 
 func (s *S3Storage) Delete(ctx context.Context, key string) error {
-	_, err := s.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
