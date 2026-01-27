@@ -89,7 +89,7 @@
           <div class="flex items-center gap-4">
             <button 
               @click="previousDay"
-              :disabled="navigating"
+              :disabled="navigating || !hasPreviousDay"
               class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,7 +100,7 @@
 
             <button 
               @click="nextDay"
-              :disabled="navigating || isToday"
+              :disabled="navigating || !hasNextDay"
               class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span class="hidden sm:inline">后一天</span>
@@ -141,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useImageByDate } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
@@ -152,6 +152,11 @@ const router = useRouter()
 const currentDate = ref(route.params.date as string)
 const showInfo = ref(true)
 const navigating = ref(false)
+
+// 前后日期可用性
+const hasPreviousDay = ref(true)
+const hasNextDay = ref(true)
+const checkingDates = ref(false)
 
 // 拖动相关状态
 const infoPanel = ref<HTMLElement | null>(null)
@@ -230,8 +235,49 @@ const stopDrag = () => {
 // 使用 composable 获取图片数据（传递 ref，自动响应日期变化）
 const { image, loading, error } = useImageByDate(currentDate)
 
+// 检测指定日期是否有数据
+const checkDateAvailability = async (dateStr: string): Promise<boolean> => {
+  try {
+    await bingPaperApi.getImageMetaByDate(dateStr)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+// 检测前后日期可用性
+const checkAdjacentDates = async () => {
+  if (checkingDates.value) return
+  
+  checkingDates.value = true
+  const date = new Date(currentDate.value)
+  
+  // 检测前一天
+  const prevDate = new Date(date)
+  prevDate.setDate(prevDate.getDate() - 1)
+  hasPreviousDay.value = await checkDateAvailability(prevDate.toISOString().split('T')[0])
+  
+  // 检测后一天（不能超过今天）
+  const nextDate = new Date(date)
+  nextDate.setDate(nextDate.getDate() + 1)
+  const today = new Date().toISOString().split('T')[0]
+  if (nextDate.toISOString().split('T')[0] > today) {
+    hasNextDay.value = false
+  } else {
+    hasNextDay.value = await checkDateAvailability(nextDate.toISOString().split('T')[0])
+  }
+  
+  checkingDates.value = false
+}
+
 // 初始化位置
 initPanelPosition()
+
+// 监听日期变化，检测前后日期可用性
+import { watch } from 'vue'
+watch(currentDate, () => {
+  checkAdjacentDates()
+}, { immediate: true })
 
 // 格式化日期
 const formatDate = (dateStr?: string) => {
@@ -244,12 +290,6 @@ const formatDate = (dateStr?: string) => {
     weekday: 'long'
   })
 }
-
-// 判断是否是今天
-const isToday = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
-  return currentDate.value === today
-})
 
 // 获取完整图片 URL
 const getFullImageUrl = () => {
@@ -265,7 +305,7 @@ const goBack = () => {
 
 // 前一天
 const previousDay = () => {
-  if (navigating.value) return
+  if (navigating.value || !hasPreviousDay.value) return
   
   navigating.value = true
   const date = new Date(currentDate.value)
@@ -282,7 +322,7 @@ const previousDay = () => {
 
 // 后一天
 const nextDay = () => {
-  if (navigating.value || isToday.value) return
+  if (navigating.value || !hasNextDay.value) return
   
   navigating.value = true
   const date = new Date(currentDate.value)
@@ -299,9 +339,9 @@ const nextDay = () => {
 
 // 键盘导航
 const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'ArrowLeft') {
+  if (e.key === 'ArrowLeft' && hasPreviousDay.value) {
     previousDay()
-  } else if (e.key === 'ArrowRight' && !isToday.value) {
+  } else if (e.key === 'ArrowRight' && hasNextDay.value) {
     nextDay()
   } else if (e.key === 'Escape') {
     goBack()

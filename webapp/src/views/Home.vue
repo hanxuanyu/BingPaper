@@ -173,13 +173,18 @@
             <span>加载中...</span>
           </div>
           
-          <button 
+          <div 
             v-else-if="hasMore"
-            @click="loadMore"
-            class="px-8 py-3 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all border border-white/30"
+            ref="loadMoreTrigger"
+            class="inline-block"
           >
-            加载更多
-          </button>
+            <button 
+              @click="loadMore"
+              class="px-8 py-3 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all border border-white/30"
+            >
+              加载更多
+            </button>
+          </div>
 
           <p v-else class="text-white/40">
             已加载全部图片
@@ -246,8 +251,8 @@ const router = useRouter()
 // 获取今日图片
 const { image: todayImage, loading: todayLoading } = useTodayImage()
 
-// 获取图片列表（使用服务端分页和筛选）
-const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(30)
+// 获取图片列表（使用服务端分页和筛选，每页15张）
+const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(15)
 
 // 筛选相关状态
 const selectedYear = ref('')
@@ -257,6 +262,10 @@ const selectedMonth = ref('')
 const imageRefs = ref<(HTMLElement | null)[]>([])
 const imageVisibility = ref<boolean[]>([])
 let observer: IntersectionObserver | null = null
+
+// 无限滚动加载
+const loadMoreTrigger = ref<HTMLElement | null>(null)
+let loadMoreObserver: IntersectionObserver | null = null
 
 // 计算可用的年份列表（基于当前日期生成，从2020年到当前年份）
 const availableYears = computed(() => {
@@ -360,16 +369,6 @@ const setupObserver = () => {
   })
 }
 
-// 初始化懒加载状态
-onMounted(() => {
-  // 初始化时设置
-  if (images.value.length > 0) {
-    imageVisibility.value = new Array(images.value.length).fill(false)
-    setTimeout(() => {
-      setupObserver()
-    }, 100)
-  }
-})
 
 // 监听 images 变化，动态更新 imageVisibility
 watch(() => images.value.length, (newLength, oldLength) => {
@@ -399,10 +398,50 @@ watch(() => images.value.length, (newLength, oldLength) => {
   }
 })
 
+// 设置无限滚动 Observer
+const setupLoadMoreObserver = () => {
+  if (loadMoreObserver) {
+    loadMoreObserver.disconnect()
+  }
+  
+  loadMoreObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !loading.value && hasMore.value) {
+          loadMore()
+        }
+      })
+    },
+    {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1
+    }
+  )
+  
+  if (loadMoreTrigger.value) {
+    loadMoreObserver.observe(loadMoreTrigger.value)
+  }
+}
+
+// 初始化时设置无限滚动
+onMounted(() => {
+  if (images.value.length > 0) {
+    imageVisibility.value = new Array(images.value.length).fill(false)
+    setTimeout(() => {
+      setupObserver()
+      setupLoadMoreObserver()
+    }, 100)
+  }
+})
+
 // 清理
 onUnmounted(() => {
   if (observer) {
     observer.disconnect()
+  }
+  if (loadMoreObserver) {
+    loadMoreObserver.disconnect()
   }
 })
 
