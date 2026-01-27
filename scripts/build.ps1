@@ -38,9 +38,9 @@ foreach ($Platform in $Platforms) {
     $Arch = $parts[1]
     
     $OutputName = "$AppName-$OS-$Arch"
-    $BinaryName = $OutputName
+    $BinaryName = $AppName
     if ($OS -eq "windows") {
-        $BinaryName = "$OutputName.exe"
+        $BinaryName = "$AppName.exe"
     }
     
     Write-Host "正在编译 $OS/$Arch..."
@@ -63,10 +63,10 @@ foreach ($Platform in $Platforms) {
         Copy-Item "README.md" $PackageDir\
         
         $CurrentDir = Get-Location
-        Set-Location $OutputDir
-        tar -czf "${OutputName}.tar.gz" $OutputName
-        Remove-Item -Recurse -Force $OutputName
+        Set-Location $PackageDir
+        tar -czf "../${OutputName}.tar.gz" .
         Set-Location $CurrentDir
+        Remove-Item -Recurse -Force $PackageDir
         
         Write-Host "  $OS/$Arch 打包完成: ${OutputName}.tar.gz"
     } else {

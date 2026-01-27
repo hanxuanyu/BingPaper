@@ -45,9 +45,9 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     # 设置输出名称
     OUTPUT_NAME="${APP_NAME}-${OS}-${ARCH}"
     if [ "$OS" = "windows" ]; then
-        BINARY_NAME="${OUTPUT_NAME}.exe"
+        BINARY_NAME="${APP_NAME}.exe"
     else
-        BINARY_NAME="${OUTPUT_NAME}"
+        BINARY_NAME="${APP_NAME}"
     fi
     
     echo "正在编译 ${OS}/${ARCH}..."
@@ -71,7 +71,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
         done
         
         # 压缩为 tar.gz
-        tar -czf "${OUTPUT_DIR}/${OUTPUT_NAME}.tar.gz" -C "${OUTPUT_DIR}" "${OUTPUT_NAME}"
+        tar -czf "${OUTPUT_DIR}/${OUTPUT_NAME}.tar.gz" -C "${PACKAGE_DIR}" .
         
         # 删除临时打包目录
         rm -rf "$PACKAGE_DIR"

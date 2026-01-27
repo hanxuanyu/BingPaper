@@ -27,8 +27,8 @@ set PLATFORMS=linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/amd64 d
 for %%p in (%PLATFORMS%) do (
     for /f "tokens=1,2 delims=/" %%a in ("%%p") do (
         set OUTPUT_NAME=%APP_NAME%-%%a-%%b
-        set BINARY_NAME=!OUTPUT_NAME!
-        if "%%a"=="windows" set BINARY_NAME=!OUTPUT_NAME!.exe
+        set BINARY_NAME=%APP_NAME%
+        if "%%a"=="windows" set BINARY_NAME=%APP_NAME%.exe
         
         echo 正在编译 %%a/%%b...
         
@@ -47,10 +47,10 @@ for %%p in (%PLATFORMS%) do (
             copy /y config.example.yaml !PACKAGE_DIR!\ >nul
             copy /y README.md !PACKAGE_DIR!\ >nul
             
-            pushd %OUTPUT_DIR%
-            tar -czf !OUTPUT_NAME!.tar.gz !OUTPUT_NAME!
-            rd /s /q !OUTPUT_NAME!
+            pushd !PACKAGE_DIR!
+            tar -czf ..\!OUTPUT_NAME!.tar.gz .
             popd
+            rd /s /q !PACKAGE_DIR!
             
             echo   %%a/%%b 打包完成: !OUTPUT_NAME!.tar.gz
         ) else (
