@@ -4,6 +4,15 @@ server:
 
 log:
   level: info
+  filename: data/logs/app.log
+  db_filename: data/logs/db.log
+  max_size: 100
+  max_backups: 3
+  max_age: 7
+  compress: true
+  log_console: true
+  show_db_log: false
+  db_log_level: info
 
 api:
   mode: local # local | redirect

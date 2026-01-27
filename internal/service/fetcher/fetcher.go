@@ -55,16 +55,21 @@ func NewFetcher() *Fetcher {
 func (f *Fetcher) Fetch(ctx context.Context, n int) error {
 	util.Logger.Info("Starting fetch task", zap.Int("n", n))
 	url := fmt.Sprintf("%s?format=js&idx=0&n=%d&uhd=1&mkt=%s", config.BingAPIBase, n, config.BingMkt)
+	util.Logger.Debug("Requesting Bing API", zap.String("url", url))
 	resp, err := f.httpClient.Get(url)
 	if err != nil {
+		util.Logger.Error("Failed to request Bing API", zap.Error(err))
 		return err
 	}
 	defer resp.Body.Close()
 
 	var bingResp BingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&bingResp); err != nil {
+		util.Logger.Error("Failed to decode Bing API response", zap.Error(err))
 		return err
 	}
+
+	util.Logger.Info("Fetched images from Bing", zap.Int("count", len(bingResp.Images)))
 
 	for _, bingImg := range bingResp.Images {
 		if err := f.processImage(ctx, bingImg); err != nil {
@@ -93,12 +98,14 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 
 	imgData, err := f.downloadImage(imgURL)
 	if err != nil {
+		util.Logger.Error("Failed to download image", zap.String("url", imgURL), zap.Error(err))
 		return err
 	}
 
 	// 解码图片用于缩放
 	srcImg, _, err := image.Decode(bytes.NewReader(imgData))
 	if err != nil {
+		util.Logger.Error("Failed to decode image data", zap.Error(err))
 		return err
 	}
 
@@ -115,6 +122,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 		Columns:   []clause.Column{{Name: "date"}},
 		DoNothing: true,
 	}).Create(&dbImg).Error; err != nil {
+		util.Logger.Error("Failed to create image record", zap.Error(err))
 		return err
 	}
 
@@ -122,6 +130,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 	if dbImg.ID == 0 {
 		var existing model.Image
 		if err := repo.DB.Where("date = ?", dateStr).First(&existing).Error; err != nil {
+			util.Logger.Error("Failed to query existing image record after conflict", zap.Error(err))
 			return err
 		}
 		dbImg = existing

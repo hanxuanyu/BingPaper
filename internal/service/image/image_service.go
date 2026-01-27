@@ -25,6 +25,7 @@ func CleanupOldImages(ctx context.Context) error {
 
 	var images []model.Image
 	if err := repo.DB.Where("date < ?", threshold).Preload("Variants").Find(&images).Error; err != nil {
+		util.Logger.Error("Failed to query old images for cleanup", zap.Error(err))
 		return err
 	}
 

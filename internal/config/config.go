@@ -31,8 +31,28 @@ type ServerConfig struct {
 }
 
 type LogConfig struct {
-	Level string `mapstructure:"level"`
+	Level      string `mapstructure:"level"`
+	Filename   string `mapstructure:"filename"`     // 业务日志文件名
+	DBFilename string `mapstructure:"db_filename"`  // 数据库日志文件名
+	MaxSize    int    `mapstructure:"max_size"`     // 每个日志文件最大大小 (MB)
+	MaxBackups int    `mapstructure:"max_backups"`  // 保留旧日志文件最大个数
+	MaxAge     int    `mapstructure:"max_age"`      // 保留旧日志文件最大天数
+	Compress   bool   `mapstructure:"compress"`     // 是否压缩旧日志文件
+	LogConsole bool   `mapstructure:"log_console"`  // 是否同时输出到控制台
+	ShowDBLog  bool   `mapstructure:"show_db_log"`  // 是否在控制台显示数据库日志
+	DBLogLevel string `mapstructure:"db_log_level"` // 数据库日志级别: debug, info, warn, error
 }
+
+func (c LogConfig) GetLevel() string      { return c.Level }
+func (c LogConfig) GetFilename() string   { return c.Filename }
+func (c LogConfig) GetDBFilename() string { return c.DBFilename }
+func (c LogConfig) GetMaxSize() int       { return c.MaxSize }
+func (c LogConfig) GetMaxBackups() int    { return c.MaxBackups }
+func (c LogConfig) GetMaxAge() int        { return c.MaxAge }
+func (c LogConfig) GetCompress() bool     { return c.Compress }
+func (c LogConfig) GetLogConsole() bool   { return c.LogConsole }
+func (c LogConfig) GetShowDBLog() bool    { return c.ShowDBLog }
+func (c LogConfig) GetDBLogLevel() string { return c.DBLogLevel }
 
 type APIConfig struct {
 	Mode string `mapstructure:"mode"` // local | redirect
@@ -122,6 +142,15 @@ func Init(configPath string) error {
 
 	v.SetDefault("server.port", 8080)
 	v.SetDefault("log.level", "info")
+	v.SetDefault("log.filename", "data/logs/app.log")
+	v.SetDefault("log.db_filename", "data/logs/db.log")
+	v.SetDefault("log.max_size", 100)
+	v.SetDefault("log.max_backups", 3)
+	v.SetDefault("log.max_age", 7)
+	v.SetDefault("log.compress", true)
+	v.SetDefault("log.log_console", true)
+	v.SetDefault("log.show_db_log", false)
+	v.SetDefault("log.db_log_level", "info")
 	v.SetDefault("api.mode", "local")
 	v.SetDefault("cron.enabled", true)
 	v.SetDefault("cron.daily_spec", "0 10 * * *")

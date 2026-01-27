@@ -34,7 +34,7 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	cfg := config.GetConfig()
 
 	// 2. 初始化日志
-	util.InitLogger(cfg.Log.Level)
+	util.InitLogger(cfg.Log)
 
 	// 输出配置信息
 	util.Logger.Info("Application configuration loaded")

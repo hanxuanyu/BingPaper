@@ -21,7 +21,16 @@ BingPaper 支持通过配置文件（YAML）和环境变量进行配置。
 - `base_url`: 服务的基础 URL，用于生成某些绝对路径，默认为空。
 
 #### log (日志配置)
-- `level`: 日志级别，可选 `debug`, `info`, `warn`, `error`，默认 `info`。
+- `level`: 业务日志级别，可选 `debug`, `info`, `warn`, `error`，默认 `info`。
+- `filename`: 业务日志输出文件路径，默认 `data/logs/app.log`。
+- `db_filename`: 数据库日志输出文件路径，默认 `data/logs/db.log`。
+- `max_size`: 日志文件切割大小 (MB)，默认 `100`。
+- `max_backups`: 保留旧日志文件个数，默认 `3`。
+- `max_age`: 保留旧日志文件天数，默认 `7`。
+- `compress`: 是否压缩旧日志文件，默认 `true`。
+- `log_console`: 是否同时输出到控制台，默认 `true`。
+- `show_db_log`: 是否在控制台输出数据库日志（SQL），默认 `false`。
+- `db_log_level`: 数据库日志级别，可选 `debug`, `info`, `warn`, `error`, `silent`。`debug`/`info` 会记录所有 SQL。默认 `info`。
 
 #### api (API 模式)
 - `mode`: API 行为模式。

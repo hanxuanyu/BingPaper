@@ -4,7 +4,9 @@ import (
 	"BingPaper/internal/config"
 	"BingPaper/internal/model"
 	"BingPaper/internal/util"
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"go.uber.org/zap"
@@ -15,6 +17,64 @@ import (
 )
 
 var DB *gorm.DB
+
+type gormLogger struct {
+	ZapLogger *zap.Logger
+	LogLevel  logger.LogLevel
+}
+
+func (l *gormLogger) LogMode(level logger.LogLevel) logger.Interface {
+	return &gormLogger{
+		ZapLogger: l.ZapLogger,
+		LogLevel:  level,
+	}
+}
+
+func (l *gormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= logger.Info {
+		l.ZapLogger.Sugar().Infof(msg, data...)
+	}
+}
+
+func (l *gormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= logger.Warn {
+		l.ZapLogger.Sugar().Warnf(msg, data...)
+	}
+}
+
+func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= logger.Error {
+		l.ZapLogger.Sugar().Errorf(msg, data...)
+	}
+}
+
+func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+	if l.LogLevel <= 0 {
+		return
+	}
+	elapsed := time.Since(begin)
+	sql, rows := fc()
+	if err != nil && l.LogLevel >= logger.Error {
+		l.ZapLogger.Error("SQL ERROR",
+			zap.Error(err),
+			zap.Duration("elapsed", elapsed),
+			zap.Int64("rows", rows),
+			zap.String("sql", sql),
+		)
+	} else if elapsed > 200*time.Millisecond && l.LogLevel >= logger.Warn {
+		l.ZapLogger.Warn("SLOW SQL",
+			zap.Duration("elapsed", elapsed),
+			zap.Int64("rows", rows),
+			zap.String("sql", sql),
+		)
+	} else if l.LogLevel >= logger.Info {
+		l.ZapLogger.Info("SQL",
+			zap.Duration("elapsed", elapsed),
+			zap.Int64("rows", rows),
+			zap.String("sql", sql),
+		)
+	}
+}
 
 func InitDB() error {
 	cfg := config.GetConfig()
@@ -31,8 +91,25 @@ func InitDB() error {
 		return fmt.Errorf("unsupported db type: %s", cfg.DB.Type)
 	}
 
+	gormLogLevel := logger.Info
+	switch cfg.Log.DBLogLevel {
+	case "debug":
+		gormLogLevel = logger.Info // GORM 的 Info 级会输出所有 SQL
+	case "info":
+		gormLogLevel = logger.Info
+	case "warn":
+		gormLogLevel = logger.Warn
+	case "error":
+		gormLogLevel = logger.Error
+	case "silent":
+		gormLogLevel = logger.Silent
+	}
+
 	gormConfig := &gorm.Config{
-		Logger:                                   logger.Default.LogMode(logger.Info),
+		Logger: &gormLogger{
+			ZapLogger: util.DBLogger,
+			LogLevel:  gormLogLevel,
+		},
 		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 

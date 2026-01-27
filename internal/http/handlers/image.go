@@ -10,8 +10,10 @@ import (
 	"BingPaper/internal/model"
 	"BingPaper/internal/service/image"
 	"BingPaper/internal/storage"
+	"BingPaper/internal/util"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // GetToday 获取今日图片
@@ -187,6 +189,7 @@ func handleImageResponse(c *gin.Context, img *model.Image) {
 func serveLocal(c *gin.Context, key string) {
 	reader, contentType, err := storage.GlobalStorage.Get(context.Background(), key)
 	if err != nil {
+		util.Logger.Error("Failed to get image from storage", zap.String("key", key), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get image"})
 		return
 	}
