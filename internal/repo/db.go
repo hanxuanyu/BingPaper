@@ -76,21 +76,20 @@ func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 	}
 }
 
-func InitDB() error {
-	cfg := config.GetConfig()
-	var dialector gorm.Dialector
-
-	switch cfg.DB.Type {
+func GetDialector(dbType, dsn string) (gorm.Dialector, error) {
+	switch dbType {
 	case "mysql":
-		dialector = mysql.Open(cfg.DB.DSN)
+		return mysql.Open(dsn), nil
 	case "postgres":
-		dialector = postgres.Open(cfg.DB.DSN)
+		return postgres.Open(dsn), nil
 	case "sqlite":
-		dialector = sqlite.Open(cfg.DB.DSN)
+		return sqlite.Open(dsn), nil
 	default:
-		return fmt.Errorf("unsupported db type: %s", cfg.DB.Type)
+		return nil, fmt.Errorf("unsupported db type: %s", dbType)
 	}
+}
 
+func GetGormConfig(cfg *config.Config) *gorm.Config {
 	gormLogLevel := logger.Info
 	switch cfg.Log.DBLogLevel {
 	case "debug":
@@ -105,13 +104,23 @@ func InitDB() error {
 		gormLogLevel = logger.Silent
 	}
 
-	gormConfig := &gorm.Config{
+	return &gorm.Config{
 		Logger: &gormLogger{
 			ZapLogger: util.DBLogger,
 			LogLevel:  gormLogLevel,
 		},
 		DisableForeignKeyConstraintWhenMigrating: true,
 	}
+}
+
+func InitDB() error {
+	cfg := config.GetConfig()
+	dialector, err := GetDialector(cfg.DB.Type, cfg.DB.DSN)
+	if err != nil {
+		return err
+	}
+
+	gormConfig := GetGormConfig(cfg)
 
 	db, err := gorm.Open(dialector, gormConfig)
 	if err != nil {

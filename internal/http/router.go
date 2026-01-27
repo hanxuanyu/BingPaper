@@ -14,6 +14,7 @@ import (
 	"BingPaper/internal/http/handlers"
 	"BingPaper/internal/http/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -21,6 +22,14 @@ import (
 
 func SetupRouter(webFS embed.FS) *gin.Engine {
 	r := gin.Default()
+
+	// CORS 配置：更宽松的配置以解决 Vue 等前端的预检请求问题
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Accept", "X-Requested-With"}
+	corsConfig.AllowCredentials = true
+	r.Use(cors.New(corsConfig))
 
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

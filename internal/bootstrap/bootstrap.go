@@ -65,6 +65,16 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 		util.Logger.Fatal("Failed to initialize database")
 	}
 
+	// 注册数据库配置变更回调，支持热迁移
+	config.OnDBConfigChange = func(newCfg *config.Config) {
+		util.Logger.Info("Database configuration change detected, initiating migration...")
+		if err := repo.MigrateDataToNewDB(repo.DB, newCfg); err != nil {
+			util.Logger.Error("Automatic data migration failed", zap.Error(err))
+		} else {
+			util.Logger.Info("Automatic data migration finished")
+		}
+	}
+
 	// 4. 初始化存储
 	var s storage.Storage
 	var err error

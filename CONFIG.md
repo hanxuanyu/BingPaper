@@ -51,6 +51,11 @@ BingPaper 支持通过配置文件（YAML）和环境变量进行配置。
     - MySQL 示例: `user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local`
     - Postgres 示例: `host=localhost user=user password=pass dbname=db port=5432 sslmode=disable TimeZone=Asia/Shanghai`
 
+**注意：** BingPaper 支持数据库配置的热更新。如果你在程序运行时修改了 `db.type` 或 `db.dsn`，程序会自动尝试将当前数据库中的所有数据（图片记录、变体信息、Token）迁移到新的数据库中。
+- 在迁移开始前，程序会**清空**目标数据库中的相关表以防止数据冲突。
+- 迁移过程在事务中执行，确保数据一致性。
+- 迁移完成后，程序将无缝切换到新的数据库连接。
+
 #### storage (存储配置)
 - `type`: 存储类型，可选 `local`, `s3`, `webdav`。默认 `local`。
 - **local (本地存储)**:

@@ -127,6 +127,9 @@ var (
 	GlobalConfig *Config
 	configLock   sync.RWMutex
 	v            *viper.Viper
+
+	// OnDBConfigChange 当数据库配置发生变更时的回调函数
+	OnDBConfigChange func(newCfg *Config)
 )
 
 func Init(configPath string) error {
@@ -206,8 +209,19 @@ func Init(configPath string) error {
 		var newCfg Config
 		if err := v.Unmarshal(&newCfg); err == nil {
 			configLock.Lock()
+			oldDBConfig := GlobalConfig.DB
 			GlobalConfig = &newCfg
+			newDBConfig := newCfg.DB
 			configLock.Unlock()
+
+			// 检查数据库配置是否发生变更
+			if oldDBConfig.Type != newDBConfig.Type || oldDBConfig.DSN != newDBConfig.DSN {
+				// 触发数据库迁移逻辑
+				// 这里由于循环依赖问题，我们可能需要通过回调或者一个统一的 Reload 函数来处理
+				if OnDBConfigChange != nil {
+					OnDBConfigChange(&newCfg)
+				}
+			}
 		}
 	})
 	v.WatchConfig()
