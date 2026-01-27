@@ -52,7 +52,7 @@ func GetToday(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	handleImageResponse(c, img)
+	handleImageResponse(c, img, 7200) // 2小时
 }
 
 // GetTodayMeta 获取今日图片元数据
@@ -68,6 +68,7 @@ func GetTodayMeta(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
+	c.Header("Cache-Control", "public, max-age=7200") // 2小时
 	c.JSON(http.StatusOK, formatMeta(img))
 }
 
@@ -86,7 +87,7 @@ func GetRandom(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	handleImageResponse(c, img)
+	handleImageResponse(c, img, 0) // 禁用缓存
 }
 
 // GetRandomMeta 获取随机图片元数据
@@ -102,6 +103,7 @@ func GetRandomMeta(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
+	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.JSON(http.StatusOK, formatMeta(img))
 }
 
@@ -122,7 +124,7 @@ func GetByDate(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	handleImageResponse(c, img)
+	handleImageResponse(c, img, 604800) // 7天
 }
 
 // GetByDateMeta 获取指定日期图片元数据
@@ -140,6 +142,7 @@ func GetByDateMeta(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
+	c.Header("Cache-Control", "public, max-age=604800") // 7天
 	c.JSON(http.StatusOK, formatMeta(img))
 }
 
@@ -203,7 +206,7 @@ func ListImages(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func handleImageResponse(c *gin.Context, img *model.Image) {
+func handleImageResponse(c *gin.Context, img *model.Image, maxAge int) {
 	variant := c.DefaultQuery("variant", "UHD")
 	format := c.DefaultQuery("format", "jpg")
 
@@ -228,22 +231,30 @@ func handleImageResponse(c *gin.Context, img *model.Image) {
 	mode := config.GetConfig().API.Mode
 	if mode == "redirect" {
 		if selected.PublicURL != "" {
-			c.Header("Cache-Control", "public, max-age=604800") // 7天
+			if maxAge > 0 {
+				c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
+			} else {
+				c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+			}
 			c.Redirect(http.StatusFound, selected.PublicURL)
 		} else if img.URLBase != "" {
 			// 兜底重定向到原始 Bing
 			bingURL := fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, selected.Variant)
-			c.Header("Cache-Control", "public, max-age=604800") // 7天
+			if maxAge > 0 {
+				c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
+			} else {
+				c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+			}
 			c.Redirect(http.StatusFound, bingURL)
 		} else {
-			serveLocal(c, selected.StorageKey, img.Date)
+			serveLocal(c, selected.StorageKey, img.Date, maxAge)
 		}
 	} else {
-		serveLocal(c, selected.StorageKey, img.Date)
+		serveLocal(c, selected.StorageKey, img.Date, maxAge)
 	}
 }
 
-func serveLocal(c *gin.Context, key string, etag string) {
+func serveLocal(c *gin.Context, key string, etag string, maxAge int) {
 	if etag != "" {
 		c.Header("ETag", fmt.Sprintf("\"%s\"", etag))
 		if c.GetHeader("If-None-Match") == fmt.Sprintf("\"%s\"", etag) {
@@ -263,7 +274,12 @@ func serveLocal(c *gin.Context, key string, etag string) {
 	if contentType != "" {
 		c.Header("Content-Type", contentType)
 	}
-	c.Header("Cache-Control", "public, max-age=604800") // 7天
+
+	if maxAge > 0 {
+		c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
+	} else {
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	}
 	io.Copy(c.Writer, reader)
 }
 
