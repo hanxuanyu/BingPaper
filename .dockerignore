@@ -5,7 +5,7 @@ node_modules
 data
 output
 scripts
-docs
+# docs
 *.md
 docker-compose.yml
 Dockerfile
