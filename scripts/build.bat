@@ -26,9 +26,6 @@ set PLATFORMS=linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/amd64 d
 
 for %%p in (%PLATFORMS%) do (
     for /f "tokens=1,2 delims=/" %%a in ("%%p") do (
-        set GOOS=%%a
-        set GOARCH=%%b
-        
         set OUTPUT_NAME=%APP_NAME%-%%a-%%b
         set BINARY_NAME=!OUTPUT_NAME!
         if "%%a"=="windows" set BINARY_NAME=!OUTPUT_NAME!.exe
