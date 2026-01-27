@@ -1,8 +1,8 @@
-# åˆ‡æ¢åˆ°é¡¹ç›®æ ¹ç›®å½•
+# ÇĞ»»µ½ÏîÄ¿¸ùÄ¿Â¼
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 if ($ScriptDir) { Set-Location (Join-Path $ScriptDir "..") }
 
-# è·å–ç‰ˆæœ¬å·
+# »ñÈ¡°æ±¾ºÅ
 $TagName = $args[0]
 
 if (-not $TagName) {
@@ -10,26 +10,26 @@ if (-not $TagName) {
     exit 1
 }
 
-# ç¡®ä¿åœ¨ master åˆ†æ”¯
+# È·±£ÔÚ master ·ÖÖ§
 $CurrentBranch = git rev-parse --abbrev-ref HEAD
 if ($CurrentBranch -ne "master") {
     Write-Host "Error: Must be on master branch to tag. Current branch: $CurrentBranch" -ForegroundColor Red
     exit 1
 }
 
-# æ£€æŸ¥æ˜¯å¦æœ‰æœªæäº¤çš„ä»£ç 
+# ¼ì²éÊÇ·ñÓĞÎ´Ìá½»µÄ´úÂë
 $Changes = git status --porcelain
 if ($Changes) {
     Write-Host "Error: You have uncommitted changes. Please commit or stash them first." -ForegroundColor Red
     exit 1
 }
 
-# æ‹‰å–æœ€æ–°ä»£ç 
+# À­È¡×îĞÂ´úÂë
 Write-Host "Updating master branch..."
 git pull origin master
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# æ£€æŸ¥æœ¬åœ°å’Œè¿œç«¯æ˜¯å¦ä¸€è‡´
+# ¼ì²é±¾µØºÍÔ¶¶ËÊÇ·ñÒ»ÖÂ
 $Local = git rev-parse @
 $Remote = git rev-parse @{u}
 
@@ -38,7 +38,7 @@ if ($Local -ne $Remote) {
     exit 1
 }
 
-# åˆ›å»ºå¹¶æ¨é€ tag
+# ´´½¨²¢ÍÆËÍ tag
 Write-Host "Creating tag $TagName..."
 git tag -f "$TagName"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

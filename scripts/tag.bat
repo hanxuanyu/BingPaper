@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: åˆ‡æ¢åˆ°é¡¹ç›®æ ¹ç›®å½•
+:: ÇĞ»»µ½ÏîÄ¿¸ùÄ¿Â¼
 cd /d %~dp0..
 
-:: è·å–ç‰ˆæœ¬å·
+:: »ñÈ¡°æ±¾ºÅ
 set TAG_NAME=%1
 
 if "%TAG_NAME%"=="" (
@@ -12,14 +12,14 @@ if "%TAG_NAME%"=="" (
     exit /b 1
 )
 
-:: ç¡®ä¿åœ¨ master åˆ†æ”¯
+:: È·±£ÔÚ master ·ÖÖ§
 for /f "tokens=*" %%i in ('git rev-parse --abbrev-ref HEAD') do set CURRENT_BRANCH=%%i
 if not "%CURRENT_BRANCH%"=="master" (
     echo Error: Must be on master branch to tag. Current branch: %CURRENT_BRANCH%
     exit /b 1
 )
 
-:: æ£€æŸ¥æ˜¯å¦æœ‰æœªæäº¤çš„ä»£ç 
+:: ¼ì²éÊÇ·ñÓĞÎ´Ìá½»µÄ´úÂë
 set CHANGES=
 for /f "tokens=*" %%i in ('git status --porcelain') do set CHANGES=%%i
 if not "%CHANGES%"=="" (
@@ -27,12 +27,12 @@ if not "%CHANGES%"=="" (
     exit /b 1
 )
 
-:: æ‹‰å–æœ€æ–°ä»£ç 
+:: À­È¡×îĞÂ´úÂë
 echo Updating master branch...
 git pull origin master
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-:: æ£€æŸ¥æœ¬åœ°å’Œè¿œç«¯æ˜¯å¦ä¸€è‡´
+:: ¼ì²é±¾µØºÍÔ¶¶ËÊÇ·ñÒ»ÖÂ
 for /f "tokens=*" %%i in ('git rev-parse @') do set LOCAL=%%i
 for /f "tokens=*" %%i in ('git rev-parse @{u}') do set REMOTE=%%i
 
@@ -41,7 +41,7 @@ if not "%LOCAL%"=="%REMOTE%" (
     exit /b 1
 )
 
-:: åˆ›å»ºå¹¶æ¨é€ tag
+:: ´´½¨²¢ÍÆËÍ tag
 echo Creating tag %TAG_NAME%...
 git tag -f "%TAG_NAME%"
 if %errorlevel% neq 0 exit /b %errorlevel%
