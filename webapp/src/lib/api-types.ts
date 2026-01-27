@@ -161,7 +161,9 @@ export interface ImageMeta {
 }
 
 export interface ImageListParams extends PaginationParams {
-  // 可以扩展更多筛选参数
+  page?: number        // 页码（从1开始）
+  page_size?: number   // 每页数量
+  month?: string       // 按月份过滤（格式：YYYY-MM）
 }
 
 export interface ManualFetchRequest {
@@ -170,5 +172,5 @@ export interface ManualFetchRequest {
 
 // ===== API 端点类型定义 =====
 
-export type ImageVariant = 'UHD' | '1920x1080' | '1366x768'
+export type ImageVariant = 'UHD' | '1920x1080' | '1366x768' | '1280x720' | '1024x768' | '800x600' | '800x480' | '640x480' | '640x360' | '480x360' | '400x240' | '320x240'
 export type ImageFormat = 'jpg'

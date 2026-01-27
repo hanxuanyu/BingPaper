@@ -86,12 +86,29 @@ func GetImageByDate(date string) (*model.Image, error) {
 	return &img, err
 }
 
-func GetImageList(limit int) ([]model.Image, error) {
+func GetImageList(limit int, offset int, month string) ([]model.Image, error) {
 	var images []model.Image
-	db := repo.DB.Order("date desc").Preload("Variants")
-	if limit > 0 {
-		db = db.Limit(limit)
+	tx := repo.DB.Model(&model.Image{})
+
+	if month != "" {
+		// 增强过滤：确保只处理 YYYY-MM 格式，防止注入或非法字符
+		// 这里简单处理：只要不为空就增加 LIKE 过滤
+		util.Logger.Debug("Filtering images by month", zap.String("month", month))
+		tx = tx.Where("date LIKE ?", month+"%")
 	}
-	err := db.Find(&images).Error
+
+	tx = tx.Order("date desc").Preload("Variants")
+
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+	if offset > 0 {
+		tx = tx.Offset(offset)
+	}
+
+	err := tx.Find(&images).Error
+	if err != nil {
+		util.Logger.Error("Failed to get image list", zap.Error(err), zap.String("month", month))
+	}
 	return images, err
 }

@@ -157,7 +157,7 @@ func Init(configPath string) error {
 	v.SetDefault("api.mode", "local")
 	v.SetDefault("cron.enabled", true)
 	v.SetDefault("cron.daily_spec", "0 10 * * *")
-	v.SetDefault("retention.days", 30)
+	v.SetDefault("retention.days", 0)
 	v.SetDefault("db.type", "sqlite")
 	v.SetDefault("db.dsn", "data/bing_paper.db")
 	v.SetDefault("storage.type", "local")

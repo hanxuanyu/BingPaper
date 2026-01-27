@@ -22,7 +22,7 @@ cron:
   daily_spec: "0 10 * * *"
 
 retention:
-  days: 30
+  days: 0
 
 db:
   type: sqlite # sqlite | mysql | postgres

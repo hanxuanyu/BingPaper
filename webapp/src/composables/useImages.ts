@@ -1,4 +1,5 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import type { Ref } from 'vue'
 import { bingPaperApi } from '@/lib/api-service'
 import type { ImageMeta } from '@/lib/api-types'
 
@@ -36,27 +37,43 @@ export function useTodayImage() {
 }
 
 /**
- * 获取图片列表（支持分页）
+ * 获取图片列表（支持分页和月份筛选）
  */
-export function useImageList(initialLimit = 30) {
+export function useImageList(pageSize = 30) {
   const images = ref<ImageMeta[]>([])
   const loading = ref(false)
   const error = ref<Error | null>(null)
   const hasMore = ref(true)
+  const currentPage = ref(1)
+  const currentMonth = ref<string | undefined>(undefined)
 
-  const fetchImages = async (limit = initialLimit) => {
+  const fetchImages = async (page = 1, month?: string) => {
     if (loading.value) return
     
     loading.value = true
     error.value = null
     try {
-      const newImages = await bingPaperApi.getImages({ limit })
-      
-      if (newImages.length < limit) {
-        hasMore.value = false
+      const params: any = {
+        page,
+        page_size: pageSize
+      }
+      if (month) {
+        params.month = month
       }
       
-      images.value = [...images.value, ...newImages]
+      const newImages = await bingPaperApi.getImages(params)
+      
+      if (page === 1) {
+        // 首次加载或重新筛选
+        images.value = newImages
+      } else {
+        // 加载更多
+        images.value = [...images.value, ...newImages]
+      }
+      
+      // 判断是否还有更多数据
+      hasMore.value = newImages.length === pageSize
+      currentPage.value = page
     } catch (e) {
       error.value = e as Error
       console.error('Failed to fetch images:', e)
@@ -67,12 +84,19 @@ export function useImageList(initialLimit = 30) {
 
   const loadMore = () => {
     if (!loading.value && hasMore.value) {
-      fetchImages()
+      fetchImages(currentPage.value + 1, currentMonth.value)
     }
   }
 
+  const filterByMonth = (month?: string) => {
+    currentMonth.value = month
+    currentPage.value = 1
+    hasMore.value = true
+    fetchImages(1, month)
+  }
+
   onMounted(() => {
-    fetchImages()
+    fetchImages(1)
   })
 
   return {
@@ -81,10 +105,11 @@ export function useImageList(initialLimit = 30) {
     error,
     hasMore,
     loadMore,
+    filterByMonth,
     refetch: () => {
-      images.value = []
+      currentPage.value = 1
       hasMore.value = true
-      fetchImages()
+      fetchImages(1, currentMonth.value)
     }
   }
 }
@@ -92,7 +117,7 @@ export function useImageList(initialLimit = 30) {
 /**
  * 获取指定日期的图片
  */
-export function useImageByDate(date: string) {
+export function useImageByDate(dateRef: Ref<string>) {
   const image = ref<ImageMeta | null>(null)
   const loading = ref(false)
   const error = ref<Error | null>(null)
@@ -101,18 +126,19 @@ export function useImageByDate(date: string) {
     loading.value = true
     error.value = null
     try {
-      image.value = await bingPaperApi.getImageMetaByDate(date)
+      image.value = await bingPaperApi.getImageMetaByDate(dateRef.value)
     } catch (e) {
       error.value = e as Error
-      console.error(`Failed to fetch image for date ${date}:`, e)
+      console.error(`Failed to fetch image for date ${dateRef.value}:`, e)
     } finally {
       loading.value = false
     }
   }
 
-  onMounted(() => {
+  // 监听日期变化，自动重新获取
+  watch(dateRef, () => {
     fetchImage()
-  })
+  }, { immediate: true })
 
   return {
     image,

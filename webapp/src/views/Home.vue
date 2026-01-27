@@ -62,20 +62,87 @@
     <!-- Gallery Section - 历史图片 -->
     <section class="py-16 px-4 md:px-8 lg:px-16">
       <div class="max-w-7xl mx-auto">
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-8">
-          历史精选
-        </h2>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <h2 class="text-3xl md:text-4xl font-bold text-white">
+            历史精选
+          </h2>
+          
+          <!-- 筛选器 -->
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- 年份选择 -->
+            <Select v-model="selectedYear" @update:model-value="onYearChange">
+              <SelectTrigger class="w-[180px] bg-white/10 backdrop-blur-md text-white border-white/20 hover:bg-white/15 hover:border-white/30 focus:ring-white/50 shadow-lg">
+                <SelectValue placeholder="选择年份" />
+              </SelectTrigger>
+              <SelectContent class="bg-gray-900/95 backdrop-blur-xl border-white/20 text-white">
+                <SelectItem 
+                  v-for="year in availableYears" 
+                  :key="year" 
+                  :value="String(year)"
+                  class="focus:bg-white/10 focus:text-white cursor-pointer"
+                >
+                  {{ year }} 年
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <!-- 月份选择 -->
+            <Select v-model="selectedMonth" @update:model-value="onFilterChange" :disabled="!selectedYear">
+              <SelectTrigger 
+                class="w-[180px] bg-white/10 backdrop-blur-md text-white border-white/20 hover:bg-white/15 hover:border-white/30 focus:ring-white/50 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <SelectValue placeholder="选择月份" />
+              </SelectTrigger>
+              <SelectContent class="bg-gray-900/95 backdrop-blur-xl border-white/20 text-white">
+                <SelectItem 
+                  v-for="month in 12" 
+                  :key="month" 
+                  :value="String(month)"
+                  class="focus:bg-white/10 focus:text-white cursor-pointer"
+                >
+                  {{ month }} 月
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <!-- 重置按钮 -->
+            <button 
+              v-if="selectedYear && selectedMonth"
+              @click="resetFilters"
+              class="px-4 py-2.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 backdrop-blur-md text-white rounded-lg hover:from-red-500/30 hover:to-pink-500/30 border border-red-400/30 hover:border-red-400/50 transition-all flex items-center gap-2 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              清除筛选
+            </button>
+          </div>
+        </div>
+
+        <!-- 筛选结果提示 -->
+        <div v-if="selectedYear && selectedMonth" class="mb-6 flex items-center gap-2 text-white/60 text-sm">
+          <span>当前显示：</span>
+          <span class="text-white font-medium">
+            {{ selectedYear }} 年 {{ selectedMonth }} 月
+          </span>
+          <span>的图片（共 {{ images.length }} 张）</span>
+        </div>
 
         <!-- 图片网格 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div 
             v-for="(image, index) in images" 
             :key="image.date || index"
+            :ref="el => setImageRef(el, index)"
             class="group relative aspect-video rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             @click="viewImage(image.date!)"
           >
-            <!-- 图片 -->
+            <!-- 图片（懒加载） -->
+            <div v-if="!imageVisibility[index]" class="w-full h-full bg-white/5 flex items-center justify-center">
+              <div class="w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
+            </div>
             <img 
+              v-else
               :src="getImageUrl(image.date!)" 
               :alt="image.title || 'Bing Image'"
               class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -83,15 +150,15 @@
             />
             
             <!-- 悬浮信息层 -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div class="absolute bottom-0 left-0 right-0 p-6 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                <div class="text-xs text-white/70 mb-2">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+              <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 transform md:translate-y-4 md:group-hover:translate-y-0 transition-transform duration-300">
+                <div class="text-xs text-white/70 mb-1">
                   {{ formatDate(image.date) }}
                 </div>
-                <h3 class="text-lg font-semibold text-white mb-2 line-clamp-2">
+                <h3 class="text-base md:text-lg font-semibold text-white mb-1 md:mb-2 line-clamp-2">
                   {{ image.title || '未命名' }}
                 </h3>
-                <p v-if="image.copyright" class="text-sm text-white/80 line-clamp-2">
+                <p v-if="image.copyright" class="text-xs md:text-sm text-white/80 line-clamp-2">
                   {{ image.copyright }}
                 </p>
               </div>
@@ -162,17 +229,182 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTodayImage, useImageList } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
 import { useRouter } from 'vue-router'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const router = useRouter()
 
 // 获取今日图片
 const { image: todayImage, loading: todayLoading } = useTodayImage()
 
-// 获取图片列表
-const { images, loading, hasMore, loadMore } = useImageList(30)
+// 获取图片列表（使用服务端分页和筛选）
+const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(30)
+
+// 筛选相关状态
+const selectedYear = ref('')
+const selectedMonth = ref('')
+
+// 懒加载相关
+const imageRefs = ref<(HTMLElement | null)[]>([])
+const imageVisibility = ref<boolean[]>([])
+let observer: IntersectionObserver | null = null
+
+// 计算可用的年份列表（基于当前日期生成，从2020年到当前年份）
+const availableYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years: number[] = []
+  for (let year = currentYear; year >= 2020; year--) {
+    years.push(year)
+  }
+  return years
+})
+
+// 年份选择变化时的处理
+const onYearChange = () => {
+  if (!selectedYear.value) {
+    // 清空年份时，重置所有筛选
+    selectedMonth.value = ''
+    filterByMonth(undefined)
+    imageVisibility.value = []
+    setTimeout(() => {
+      setupObserver()
+    }, 100)
+  } else if (selectedMonth.value) {
+    // 如果已经有月份选择，立即触发筛选
+    onFilterChange()
+  }
+}
+
+// 筛选变化时调用服务端筛选
+const onFilterChange = () => {
+  // 只有同时选择年份和月份时才触发筛选
+  if (selectedYear.value && selectedMonth.value) {
+    const yearStr = selectedYear.value
+    const monthStr = String(selectedMonth.value).padStart(2, '0')
+    const monthParam = `${yearStr}-${monthStr}`
+    
+    // 调用服务端筛选
+    filterByMonth(monthParam)
+    
+    // 重置懒加载状态
+    imageVisibility.value = []
+    setTimeout(() => {
+      setupObserver()
+    }, 100)
+  }
+}
+
+// 重置筛选
+const resetFilters = () => {
+  selectedYear.value = ''
+  selectedMonth.value = ''
+  
+  // 重置为加载默认数据
+  filterByMonth(undefined)
+  
+  // 重置懒加载状态
+  imageVisibility.value = []
+  setTimeout(() => {
+    setupObserver()
+  }, 100)
+}
+
+// 设置图片ref
+const setImageRef = (el: any, index: number) => {
+  if (el && el instanceof HTMLElement) {
+    imageRefs.value[index] = el
+  }
+}
+
+// 设置 Intersection Observer
+const setupObserver = () => {
+  // 清理旧的 observer
+  if (observer) {
+    observer.disconnect()
+  }
+  
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const index = imageRefs.value.findIndex(ref => ref === entry.target)
+          if (index !== -1) {
+            imageVisibility.value[index] = true
+            // 加载后取消观察
+            observer?.unobserve(entry.target)
+          }
+        }
+      })
+    },
+    {
+      root: null,
+      rootMargin: '200px', // 提前 200px 开始加载
+      threshold: 0.01
+    }
+  )
+  
+  // 观察所有图片元素
+  imageRefs.value.forEach((ref, index) => {
+    if (ref && !imageVisibility.value[index]) {
+      observer?.observe(ref)
+    }
+  })
+}
+
+// 初始化懒加载状态
+onMounted(() => {
+  // 初始化时设置
+  if (images.value.length > 0) {
+    imageVisibility.value = new Array(images.value.length).fill(false)
+    setTimeout(() => {
+      setupObserver()
+    }, 100)
+  }
+})
+
+// 监听 images 变化，动态更新 imageVisibility
+watch(() => images.value.length, (newLength, oldLength) => {
+  if (newLength > oldLength) {
+    // 图片列表增长时，扩展 imageVisibility 数组
+    const newItems = new Array(newLength - oldLength).fill(false)
+    imageVisibility.value = [...imageVisibility.value, ...newItems]
+    
+    // 重新设置 observer
+    setTimeout(() => {
+      setupObserver()
+    }, 100)
+  } else if (newLength < oldLength) {
+    // 图片列表减少时（如筛选），截断数组
+    imageVisibility.value = imageVisibility.value.slice(0, newLength)
+  } else if (newLength === 0) {
+    // 如果是首次加载
+    imageVisibility.value = []
+  }
+  
+  // 如果从 0 变为有数据，初始化并设置 observer
+  if (oldLength === 0 && newLength > 0) {
+    imageVisibility.value = new Array(newLength).fill(false)
+    setTimeout(() => {
+      setupObserver()
+    }, 100)
+  }
+})
+
+// 清理
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+  }
+})
 
 // 格式化日期
 const formatDate = (dateStr?: string) => {
@@ -190,9 +422,9 @@ const getTodayImageUrl = () => {
   return bingPaperApi.getTodayImageUrl('UHD', 'jpg')
 }
 
-// 获取图片 URL
+// 获取图片 URL（缩略图 - 使用较小分辨率节省流量）
 const getImageUrl = (date: string) => {
-  return bingPaperApi.getImageUrlByDate(date, '1920x1080', 'jpg')
+  return bingPaperApi.getImageUrlByDate(date, '640x480', 'jpg')
 }
 
 // 查看图片详情

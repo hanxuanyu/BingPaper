@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"BingPaper/internal/config"
 	"BingPaper/internal/model"
@@ -40,7 +41,7 @@ type ImageMetaResp struct {
 // @Summary 获取今日图片
 // @Description 根据参数返回今日必应图片流或重定向
 // @Tags image
-// @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768)" default(UHD)
+// @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240)" default(UHD)
 // @Param format query string false "格式 (jpg)" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
@@ -144,19 +145,53 @@ func GetByDateMeta(c *gin.Context) {
 
 // ListImages 获取图片列表
 // @Summary 获取图片列表
-// @Description 分页获取已抓取的图片元数据列表
+// @Description 分页获取已抓取的图片元数据列表。支持分页(page, page_size)、限制数量(limit)和按月份过滤(month, 格式: YYYY-MM)。
 // @Tags image
-// @Param limit query int false "限制数量" default(30)
+// @Param limit query int false "限制数量 (如果不使用分页)" default(30)
+// @Param page query int false "页码 (从1开始)"
+// @Param page_size query int false "每页数量"
+// @Param month query string false "按月份过滤 (格式: YYYY-MM)"
 // @Produce json
 // @Success 200 {array} ImageMetaResp
 // @Router /images [get]
 func ListImages(c *gin.Context) {
-	limitStr := c.DefaultQuery("limit", "30")
-	var limit int
-	fmt.Sscanf(limitStr, "%d", &limit)
+	limitStr := c.Query("limit")
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("page_size")
+	month := c.Query("month")
 
-	images, err := image.GetImageList(limit)
+	// 记录请求参数，便于排查过滤失效问题
+	util.Logger.Debug("ListImages parameters",
+		zap.String("month", month),
+		zap.String("page", pageStr),
+		zap.String("page_size", pageSizeStr),
+		zap.String("limit", limitStr))
+
+	var limit, offset int
+
+	if pageStr != "" && pageSizeStr != "" {
+		page, _ := strconv.Atoi(pageStr)
+		pageSize, _ := strconv.Atoi(pageSizeStr)
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 30
+		}
+		limit = pageSize
+		offset = (page - 1) * pageSize
+	} else {
+		if limitStr == "" {
+			limit = 30
+		} else {
+			limit, _ = strconv.Atoi(limitStr)
+		}
+		offset = 0
+	}
+
+	images, err := image.GetImageList(limit, offset, month)
 	if err != nil {
+		util.Logger.Error("ListImages service call failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

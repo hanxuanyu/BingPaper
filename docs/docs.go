@@ -537,7 +537,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "default": "UHD",
-                        "description": "分辨率 (UHD, 1920x1080, 1366x768)",
+                        "description": "分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240)",
                         "name": "variant",
                         "in": "query"
                     },
@@ -581,7 +581,7 @@ const docTemplate = `{
         },
         "/images": {
             "get": {
-                "description": "分页获取已抓取的图片元数据列表",
+                "description": "分页获取已抓取的图片元数据列表。支持分页(page, page_size)、限制数量(limit)和按月份过滤(month, 格式: YYYY-MM)。",
                 "produces": [
                     "application/json"
                 ],
@@ -593,8 +593,26 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 30,
-                        "description": "限制数量",
+                        "description": "限制数量 (如果不使用分页)",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码 (从1开始)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按月份过滤 (格式: YYYY-MM)",
+                        "name": "month",
                         "in": "query"
                     }
                 ],

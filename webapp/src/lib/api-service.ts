@@ -106,6 +106,9 @@ export class BingPaperApiService {
     const searchParams = new URLSearchParams()
     if (params?.limit) searchParams.set('limit', params.limit.toString())
     if (params?.offset) searchParams.set('offset', params.offset.toString())
+    if (params?.page) searchParams.set('page', params.page.toString())
+    if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
+    if (params?.month) searchParams.set('month', params.month)
     
     const queryString = searchParams.toString()
     const endpoint = queryString ? `/images?${queryString}` : '/images'

@@ -142,36 +142,47 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 	}
 
 	// 保存各种分辨率
-	variants := []struct {
+	targetVariants := []struct {
 		name   string
 		width  int
 		height int
 	}{
-		{variantName, 0, 0}, // 原图 (UHD 或 1080p)
 		{"1920x1080", 1920, 1080},
 		{"1366x768", 1366, 768},
+		{"1280x720", 1280, 720},
+		{"1024x768", 1024, 768},
+		{"800x600", 800, 600},
+		{"800x480", 800, 480},
+		{"640x480", 640, 480},
+		{"640x360", 640, 360},
+		{"480x360", 480, 360},
+		{"400x240", 400, 240},
+		{"320x240", 320, 240},
 	}
 
-	for _, v := range variants {
-		// 如果是探测到的最高清版本，且我们已经有了数据，直接使用
-		var currentImgData []byte
-		if v.width == 0 {
-			currentImgData = imgData
-		} else {
-			resized := imaging.Fill(srcImg, v.width, v.height, imaging.Center, imaging.Lanczos)
-			buf := new(bytes.Buffer)
-			if err := jpeg.Encode(buf, resized, &jpeg.Options{Quality: 90}); err != nil {
-				util.Logger.Warn("Failed to encode jpeg", zap.String("variant", v.name), zap.Error(err))
-				continue
-			}
-			currentImgData = buf.Bytes()
+	// 首先保存原图 (UHD 或 1080p)
+	if err := f.saveVariant(ctx, &dbImg, variantName, "jpg", imgData); err != nil {
+		util.Logger.Error("Failed to save original variant", zap.String("variant", variantName), zap.Error(err))
+	}
+
+	for _, v := range targetVariants {
+		// 如果目标分辨率就是原图分辨率，则跳过（已经保存过了）
+		if v.name == variantName {
+			continue
 		}
+
+		resized := imaging.Fill(srcImg, v.width, v.height, imaging.Center, imaging.Lanczos)
+		buf := new(bytes.Buffer)
+		if err := jpeg.Encode(buf, resized, &jpeg.Options{Quality: 100}); err != nil {
+			util.Logger.Warn("Failed to encode jpeg", zap.String("variant", v.name), zap.Error(err))
+			continue
+		}
+		currentImgData := buf.Bytes()
 
 		// 保存 JPG
 		if err := f.saveVariant(ctx, &dbImg, v.name, "jpg", currentImgData); err != nil {
 			util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
 		}
-
 	}
 
 	// 保存今日额外文件
@@ -241,13 +252,13 @@ func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte) {
 		return
 	}
 
-	// daily.jpeg (quality 95)
+	// daily.jpeg (quality 100)
 	jpegPath := filepath.Join(localRoot, "daily.jpeg")
 	fJpeg, err := os.Create(jpegPath)
 	if err != nil {
 		util.Logger.Error("Failed to create daily.jpeg", zap.Error(err))
 	} else {
-		jpeg.Encode(fJpeg, srcImg, &jpeg.Options{Quality: 95})
+		jpeg.Encode(fJpeg, srcImg, &jpeg.Options{Quality: 100})
 		fJpeg.Close()
 	}
 

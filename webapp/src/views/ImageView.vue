@@ -38,14 +38,23 @@
       <!-- 信息悬浮层（类似 Windows 聚焦） -->
       <div 
         v-if="showInfo"
-        class="absolute bottom-24 left-8 right-8 md:left-16 md:right-auto md:max-w-md bg-black/60 backdrop-blur-xl rounded-2xl p-6 transform transition-all duration-500 z-10"
-        :class="{ 'translate-y-0 opacity-100': showInfo, 'translate-y-4 opacity-0': !showInfo }"
+        ref="infoPanel"
+        class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 transform transition-opacity duration-300 z-10 select-none"
+        :style="{ left: infoPanelPos.x + 'px', top: infoPanelPos.y + 'px' }"
+        :class="{ 'opacity-100': showInfo, 'opacity-0': !showInfo }"
       >
-        <h2 class="text-2xl font-bold text-white mb-3">
+        <!-- 拖动手柄 -->
+        <div 
+          @mousedown="startDrag"
+          @touchstart="startDrag"
+          class="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full cursor-move hover:bg-white/50 transition-colors touch-none"
+        ></div>
+
+        <h2 class="text-lg font-bold text-white mb-2 mt-2">
           {{ image.title || '未命名' }}
         </h2>
         
-        <p v-if="image.copyright" class="text-white/80 text-sm mb-4 leading-relaxed">
+        <p v-if="image.copyright" class="text-white/80 text-xs mb-3 leading-relaxed">
           {{ image.copyright }}
         </p>
 
@@ -54,10 +63,10 @@
           v-if="image.copyrightlink"
           :href="image.copyrightlink"
           target="_blank"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-all group"
+          class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-medium transition-all group"
         >
-          <span>了解更多信息</span>
-          <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span>了解更多</span>
+          <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
           </svg>
         </a>
@@ -65,9 +74,9 @@
         <!-- 切换信息显示按钮 -->
         <button 
           @click="showInfo = false"
-          class="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-all"
+          class="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-lg transition-all"
         >
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
@@ -132,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useImageByDate } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
@@ -144,13 +153,85 @@ const currentDate = ref(route.params.date as string)
 const showInfo = ref(true)
 const navigating = ref(false)
 
-// 使用 composable 获取图片数据
-const { image, loading, error, refetch } = useImageByDate(currentDate.value)
+// 拖动相关状态
+const infoPanel = ref<HTMLElement | null>(null)
+const infoPanelPos = ref({ x: 0, y: 0 })
+const isDragging = ref(false)
+const dragStart = ref({ x: 0, y: 0 })
 
-// 监听日期变化
-watch(currentDate, () => {
-  refetch()
-})
+// 初始化浮窗位置（居中偏下）
+const initPanelPosition = () => {
+  if (typeof window !== 'undefined') {
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
+    const panelWidth = Math.min(windowWidth * 0.9, 448) // max-w-md = 448px
+    infoPanelPos.value = {
+      x: (windowWidth - panelWidth) / 2,
+      y: windowHeight - 200 // 距底部200px
+    }
+  }
+}
+
+// 开始拖动
+const startDrag = (e: MouseEvent | TouchEvent) => {
+  e.preventDefault()
+  isDragging.value = true
+  
+  const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
+  const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
+  
+  dragStart.value = {
+    x: clientX - infoPanelPos.value.x,
+    y: clientY - infoPanelPos.value.y
+  }
+  
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.addEventListener('touchmove', onDrag, { passive: false })
+  document.addEventListener('touchend', stopDrag)
+}
+
+// 拖动中
+const onDrag = (e: MouseEvent | TouchEvent) => {
+  if (!isDragging.value) return
+  
+  if (e instanceof TouchEvent) {
+    e.preventDefault()
+  }
+  
+  const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
+  const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
+  
+  const newX = clientX - dragStart.value.x
+  const newY = clientY - dragStart.value.y
+  
+  // 限制在视口内
+  if (infoPanel.value) {
+    const rect = infoPanel.value.getBoundingClientRect()
+    const maxX = window.innerWidth - rect.width
+    const maxY = window.innerHeight - rect.height
+    
+    infoPanelPos.value = {
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    }
+  }
+}
+
+// 停止拖动
+const stopDrag = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.removeEventListener('touchmove', onDrag)
+  document.removeEventListener('touchend', stopDrag)
+}
+
+// 使用 composable 获取图片数据（传递 ref，自动响应日期变化）
+const { image, loading, error } = useImageByDate(currentDate)
+
+// 初始化位置
+initPanelPosition()
 
 // 格式化日期
 const formatDate = (dateStr?: string) => {
@@ -232,6 +313,7 @@ const handleKeydown = (e: KeyboardEvent) => {
 // 添加键盘事件监听
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', initPanelPosition)
 }
 
 // 清理
@@ -239,6 +321,11 @@ import { onUnmounted } from 'vue'
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', handleKeydown)
+    window.removeEventListener('resize', initPanelPosition)
+    document.removeEventListener('mousemove', onDrag)
+    document.removeEventListener('mouseup', stopDrag)
+    document.removeEventListener('touchmove', onDrag)
+    document.removeEventListener('touchend', stopDrag)
   }
 })
 </script>

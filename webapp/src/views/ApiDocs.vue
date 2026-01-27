@@ -94,7 +94,10 @@
               <div class="space-y-2">
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">variant</code>
-                  <span class="text-white/50">分辨率: UHD, 1920x1080, 1366x768 (默认: UHD)</span>
+                  <div class="flex-1">
+                    <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                  </div>
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">format</code>
@@ -170,7 +173,10 @@
               <div class="space-y-2">
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">variant</code>
-                  <span class="text-white/50">分辨率 (默认: UHD)</span>
+                  <div class="flex-1">
+                    <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                  </div>
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">format</code>
@@ -239,7 +245,10 @@
               <div class="space-y-2">
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">variant</code>
-                  <span class="text-white/50">分辨率 (默认: UHD)</span>
+                  <div class="flex-1">
+                    <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                  </div>
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">format</code>

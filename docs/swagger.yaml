@@ -582,7 +582,8 @@ paths:
       description: 根据参数返回今日必应图片流或重定向
       parameters:
       - default: UHD
-        description: 分辨率 (UHD, 1920x1080, 1366x768)
+        description: 分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480,
+          640x480, 640x360, 480x360, 400x240, 320x240)
         in: query
         name: variant
         type: string
@@ -616,13 +617,26 @@ paths:
       - image
   /images:
     get:
-      description: 分页获取已抓取的图片元数据列表
+      description: '分页获取已抓取的图片元数据列表。支持分页(page, page_size)、限制数量(limit)和按月份过滤(month,
+        格式: YYYY-MM)。'
       parameters:
       - default: 30
-        description: 限制数量
+        description: 限制数量 (如果不使用分页)
         in: query
         name: limit
         type: integer
+      - description: 页码 (从1开始)
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: '按月份过滤 (格式: YYYY-MM)'
+        in: query
+        name: month
+        type: string
       produces:
       - application/json
       responses:
