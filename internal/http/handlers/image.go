@@ -173,20 +173,30 @@ func handleImageResponse(c *gin.Context, img *model.Image) {
 	mode := config.GetConfig().API.Mode
 	if mode == "redirect" {
 		if selected.PublicURL != "" {
+			c.Header("Cache-Control", "public, max-age=604800") // 7天
 			c.Redirect(http.StatusFound, selected.PublicURL)
 		} else if img.URLBase != "" {
 			// 兜底重定向到原始 Bing
 			bingURL := fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, selected.Variant)
+			c.Header("Cache-Control", "public, max-age=604800") // 7天
 			c.Redirect(http.StatusFound, bingURL)
 		} else {
-			serveLocal(c, selected.StorageKey)
+			serveLocal(c, selected.StorageKey, img.Date)
 		}
 	} else {
-		serveLocal(c, selected.StorageKey)
+		serveLocal(c, selected.StorageKey, img.Date)
 	}
 }
 
-func serveLocal(c *gin.Context, key string) {
+func serveLocal(c *gin.Context, key string, etag string) {
+	if etag != "" {
+		c.Header("ETag", fmt.Sprintf("\"%s\"", etag))
+		if c.GetHeader("If-None-Match") == fmt.Sprintf("\"%s\"", etag) {
+			c.AbortWithStatus(http.StatusNotModified)
+			return
+		}
+	}
+
 	reader, contentType, err := storage.GlobalStorage.Get(context.Background(), key)
 	if err != nil {
 		util.Logger.Error("Failed to get image from storage", zap.String("key", key), zap.Error(err))
@@ -198,6 +208,7 @@ func serveLocal(c *gin.Context, key string) {
 	if contentType != "" {
 		c.Header("Content-Type", contentType)
 	}
+	c.Header("Cache-Control", "public, max-age=604800") // 7天
 	io.Copy(c.Writer, reader)
 }
 

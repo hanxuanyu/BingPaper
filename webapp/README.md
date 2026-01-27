@@ -2,6 +2,9 @@
 
 BingPaper 的前端 Web 应用，使用 Vue 3 + TypeScript + Vite 构建。
 
+> 💡 **性能优化提示**：已配置浏览器缓存优化，可减少 60-80% 带宽！  
+> 👉 后端配置：查看 [缓存配置快速参考](./CACHE_QUICK_REF.md)
+
 ## 特性
 
 - ✨ Vue 3 组合式 API
@@ -9,6 +12,7 @@ BingPaper 的前端 Web 应用，使用 Vue 3 + TypeScript + Vite 构建。
 - 📦 TypeScript 类型支持
 - 🔧 完整的 API 客户端封装
 - 🚀 优化的构建配置
+- ⚡ 浏览器缓存优化（内容哈希 + 代码分割）
 - 🌐 支持自定义后端路径
 - 📁 自动输出到上级目录的 web 文件夹
 
@@ -105,18 +109,22 @@ src/
 └── main.ts          # 入口文件
 ```
 
-## 技术栈
+## 📚 文档
 
-- [Vue 3](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
-- [Vite](https://vitejs.dev/) - 下一代前端构建工具
-- [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
-- [shadcn-vue](https://www.shadcn-vue.com/) - 高质量的 Vue 组件库
+### 核心文档
+- [README.md](./README.md) - 项目概览（本文件）
+- [BUILD.md](./BUILD.md) - 构建说明
+- [USAGE.md](./USAGE.md) - 使用指南
 
-## IDE 支持
+### 性能优化 ⚡
+- [CACHE_QUICK_REF.md](./CACHE_QUICK_REF.md) - **缓存配置快速参考**（推荐从这里开始）
+- [CACHE_CONFIG.md](./CACHE_CONFIG.md) - 详细的缓存配置指南
+- [CACHE_OPTIMIZATION_SUMMARY.md](./CACHE_OPTIMIZATION_SUMMARY.md) - 优化总结
+- [CACHE_TEST.html](./CACHE_TEST.html) - 缓存测试页面
 
-推荐使用 [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) 扩展。
+### API 相关
+- [CORS_CONFIG.md](./CORS_CONFIG.md) - CORS 配置
+- [API_EXAMPLES.md](./API_EXAMPLES.md) - API 使用示例
 
-## License
-
-MIT
+### 其他
+- [CHANGELOG.md](./CHANGELOG.md) - 更新日志

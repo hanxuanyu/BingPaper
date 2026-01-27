@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import ImageView from '@/views/ImageView.vue'
+import ApiDocs from '@/views/ApiDocs.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +20,14 @@ const router = createRouter({
       component: ImageView,
       meta: {
         title: '图片详情'
+      }
+    },
+    {
+      path: '/api-docs',
+      name: 'ApiDocs',
+      component: ApiDocs,
+      meta: {
+        title: 'API 文档'
       }
     }
   ]
