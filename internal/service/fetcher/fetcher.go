@@ -18,8 +18,10 @@ import (
 	"BingPaper/internal/repo"
 	"BingPaper/internal/storage"
 	"BingPaper/internal/util"
+
 	"github.com/disintegration/imaging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 type BingResponse struct {
@@ -109,8 +111,20 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 		Quiz:      bingImg.Quiz,
 	}
 
-	if err := repo.DB.Create(&dbImg).Error; err != nil {
+	if err := repo.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "date"}},
+		DoNothing: true,
+	}).Create(&dbImg).Error; err != nil {
 		return err
+	}
+
+	// 再次检查 dbImg.ID 是否被填充，如果没有被填充（说明由于冲突未插入），则需要查询出已有的 ID
+	if dbImg.ID == 0 {
+		var existing model.Image
+		if err := repo.DB.Where("date = ?", dateStr).First(&existing).Error; err != nil {
+			return err
+		}
+		dbImg = existing
 	}
 
 	// 保存各种分辨率
@@ -194,27 +208,38 @@ func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, variant, fo
 		Size:       int64(len(data)),
 	}
 
-	return repo.DB.Create(&vRecord).Error
+	return repo.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "image_id"}, {Name: "variant"}, {Name: "format"}},
+		DoNothing: true,
+	}).Create(&vRecord).Error
 }
 
 func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte) {
 	util.Logger.Info("Saving daily files")
 	localRoot := config.GetConfig().Storage.Local.Root
 	if config.GetConfig().Storage.Type != "local" {
-		// 如果不是本地存储，保存在临时目录或指定缓存目录
+		// 如果不是本地存储，保存在静态资源目录
 		localRoot = "static"
 	}
-	os.MkdirAll(filepath.Join(localRoot, "static"), 0755)
+
+	if err := os.MkdirAll(localRoot, 0755); err != nil {
+		util.Logger.Error("Failed to create directory", zap.String("path", localRoot), zap.Error(err))
+		return
+	}
 
 	// daily.jpeg (quality 95)
-	jpegPath := filepath.Join(localRoot, "static", "daily.jpeg")
-	fJpeg, _ := os.Create(jpegPath)
-	if fJpeg != nil {
+	jpegPath := filepath.Join(localRoot, "daily.jpeg")
+	fJpeg, err := os.Create(jpegPath)
+	if err != nil {
+		util.Logger.Error("Failed to create daily.jpeg", zap.Error(err))
+	} else {
 		jpeg.Encode(fJpeg, srcImg, &jpeg.Options{Quality: 95})
 		fJpeg.Close()
 	}
 
 	// original.jpeg (quality 100)
-	originalPath := filepath.Join(localRoot, "static", "original.jpeg")
-	os.WriteFile(originalPath, originalData, 0644)
+	originalPath := filepath.Join(localRoot, "original.jpeg")
+	if err := os.WriteFile(originalPath, originalData, 0644); err != nil {
+		util.Logger.Error("Failed to write original.jpeg", zap.Error(err))
+	}
 }

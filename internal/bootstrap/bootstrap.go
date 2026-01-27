@@ -37,26 +37,25 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	util.InitLogger(cfg.Log.Level)
 
 	// 输出配置信息
-	util.Logger.Info("Application configuration loaded",
-		zap.String("config_file", config.GetRawViper().ConfigFileUsed()),
-		zap.String("db_type", cfg.DB.Type),
-		zap.String("storage_type", cfg.Storage.Type),
-		zap.Int("server_port", cfg.Server.Port),
-	)
+	util.Logger.Info("Application configuration loaded")
+	util.Logger.Info("├─ Config file", zap.String("path", config.GetRawViper().ConfigFileUsed()))
+	util.Logger.Info("├─ Database   ", zap.String("type", cfg.DB.Type))
+	util.Logger.Info("├─ Storage    ", zap.String("type", cfg.Storage.Type))
+	util.Logger.Info("└─ Server     ", zap.Int("port", cfg.Server.Port))
 
 	// 根据存储类型输出更多信息
 	switch cfg.Storage.Type {
 	case "s3":
-		util.Logger.Info("S3 storage info",
+		util.Logger.Info("S3 storage detail",
 			zap.String("endpoint", cfg.Storage.S3.Endpoint),
 			zap.String("bucket", cfg.Storage.S3.Bucket),
 		)
 	case "webdav":
-		util.Logger.Info("WebDAV storage info",
+		util.Logger.Info("WebDAV storage detail",
 			zap.String("url", cfg.Storage.WebDAV.URL),
 		)
 	default:
-		util.Logger.Info("Local storage info",
+		util.Logger.Info("Local storage detail",
 			zap.String("root", cfg.Storage.Local.Root),
 		)
 	}

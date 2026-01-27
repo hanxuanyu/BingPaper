@@ -35,10 +35,14 @@ func CleanupOldImages(ctx context.Context) error {
 				util.Logger.Warn("Failed to delete storage object", zap.String("key", v.StorageKey), zap.Error(err))
 			}
 		}
-		// 删除 DB 记录 (级联删除由代码处理，或者 GORM 会处理已加载的关联吗？)
-		// 简单起见，手动删除关联
-		repo.DB.Where("image_id = ?", img.ID).Delete(&model.ImageVariant{})
-		repo.DB.Delete(&img)
+		// 删除关联记录（逻辑外键控制）
+		if err := repo.DB.Where("image_id = ?", img.ID).Delete(&model.ImageVariant{}).Error; err != nil {
+			util.Logger.Error("Failed to delete variants", zap.Uint("image_id", img.ID), zap.Error(err))
+		}
+		// 删除主表记录
+		if err := repo.DB.Delete(&img).Error; err != nil {
+			util.Logger.Error("Failed to delete image", zap.Uint("id", img.ID), zap.Error(err))
+		}
 	}
 
 	util.Logger.Info("Cleanup task completed", zap.Int("deleted_count", len(images)))

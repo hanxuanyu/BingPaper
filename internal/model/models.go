@@ -16,12 +16,12 @@ type Image struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Variants  []ImageVariant `gorm:"foreignKey:ImageID" json:"variants"`
+	Variants  []ImageVariant `gorm:"foreignKey:ImageID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"variants"`
 }
 
 type ImageVariant struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
-	ImageID    uint      `gorm:"uniqueIndex:idx_image_variant_format" json:"image_id"`
+	ImageID    uint      `gorm:"index;uniqueIndex:idx_image_variant_format" json:"image_id"`
 	Variant    string    `gorm:"uniqueIndex:idx_image_variant_format;type:varchar(20)" json:"variant"` // UHD, 1920x1080, etc.
 	Format     string    `gorm:"uniqueIndex:idx_image_variant_format;type:varchar(10)" json:"format"`  // jpg, webp
 	StorageKey string    `json:"storage_key"`

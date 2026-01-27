@@ -32,7 +32,8 @@ func InitDB() error {
 	}
 
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger:                                   logger.Default.LogMode(logger.Info),
+		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 
 	db, err := gorm.Open(dialector, gormConfig)
@@ -40,8 +41,12 @@ func InitDB() error {
 		return err
 	}
 
+	// 针对 MySQL 的额外处理：如果数据库不存在，GORM 的 mysql 驱动通常无法直接创建库。
+	// 但此处假设 DSN 中指定的数据库已经存在。AutoMigrate 会负责创建表。
+
 	// 迁移
 	if err := db.AutoMigrate(&model.Image{}, &model.ImageVariant{}, &model.Token{}); err != nil {
+		util.Logger.Error("Database migration failed", zap.Error(err))
 		return err
 	}
 
