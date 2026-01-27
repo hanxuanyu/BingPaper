@@ -242,9 +242,8 @@ func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, variant, fo
 func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte) {
 	util.Logger.Info("Saving daily files")
 	localRoot := config.GetConfig().Storage.Local.Root
-	if config.GetConfig().Storage.Type != "local" {
-		// 如果不是本地存储，保存在静态资源目录
-		localRoot = "static"
+	if localRoot == "" {
+		localRoot = "data"
 	}
 
 	if err := os.MkdirAll(localRoot, 0755); err != nil {

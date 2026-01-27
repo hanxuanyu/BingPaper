@@ -32,11 +32,9 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 # 创建必要目录
-RUN mkdir -p data static
+RUN mkdir -p data
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/BingPaper .
-# 复制静态资源（如果有些资源没有被 embed）
-COPY --from=builder /app/static ./static
 # 复制默认配置
 COPY config.example.yaml ./data/config.yaml
 

@@ -34,9 +34,6 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// 静态文件
-	r.Static("/static", "./static")
-
 	api := r.Group("/api/v1")
 	{
 		// 公共接口
