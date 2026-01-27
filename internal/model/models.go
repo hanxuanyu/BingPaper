@@ -7,16 +7,20 @@ import (
 )
 
 type Image struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Date      string         `gorm:"uniqueIndex;type:varchar(10)" json:"date"` // YYYY-MM-DD
-	Title     string         `json:"title"`
-	Copyright string         `json:"copyright"`
-	URLBase   string         `json:"urlbase"`
-	Quiz      string         `json:"quiz"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Variants  []ImageVariant `gorm:"foreignKey:ImageID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"variants"`
+	ID            uint           `gorm:"primaryKey" json:"id"`
+	Date          string         `gorm:"uniqueIndex;type:varchar(10)" json:"date"` // YYYY-MM-DD
+	Title         string         `json:"title"`
+	Copyright     string         `json:"copyright"`
+	CopyrightLink string         `json:"copyrightlink"`
+	URLBase       string         `json:"urlbase"`
+	Quiz          string         `json:"quiz"`
+	StartDate     string         `json:"startdate"`
+	FullStartDate string         `json:"fullstartdate"`
+	HSH           string         `json:"hsh"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	Variants      []ImageVariant `gorm:"foreignKey:ImageID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"variants"`
 }
 
 type ImageVariant struct {

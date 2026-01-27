@@ -16,6 +16,26 @@ import (
 	"go.uber.org/zap"
 )
 
+type ImageVariantResp struct {
+	Variant    string `json:"variant"`
+	Format     string `json:"format"`
+	Size       int64  `json:"size"`
+	URL        string `json:"url"`
+	StorageKey string `json:"storage_key"`
+}
+
+type ImageMetaResp struct {
+	Date          string             `json:"date"`
+	Title         string             `json:"title"`
+	Copyright     string             `json:"copyright"`
+	CopyrightLink string             `json:"copyrightlink"`
+	Quiz          string             `json:"quiz"`
+	StartDate     string             `json:"startdate"`
+	FullStartDate string             `json:"fullstartdate"`
+	HSH           string             `json:"hsh"`
+	Variants      []ImageVariantResp `json:"variants"`
+}
+
 // GetToday 获取今日图片
 // @Summary 获取今日图片
 // @Description 根据参数返回今日必应图片流或重定向
@@ -39,7 +59,7 @@ func GetToday(c *gin.Context) {
 // @Description 获取今日必应图片的标题、版权等元数据
 // @Tags image
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} ImageMetaResp
 // @Router /image/today/meta [get]
 func GetTodayMeta(c *gin.Context) {
 	img, err := image.GetTodayImage()
@@ -73,7 +93,7 @@ func GetRandom(c *gin.Context) {
 // @Description 随机获取一张已抓取图片的元数据
 // @Tags image
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} ImageMetaResp
 // @Router /image/random/meta [get]
 func GetRandomMeta(c *gin.Context) {
 	img, err := image.GetRandomImage()
@@ -110,7 +130,7 @@ func GetByDate(c *gin.Context) {
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} ImageMetaResp
 // @Router /image/date/{date}/meta [get]
 func GetByDateMeta(c *gin.Context) {
 	date := c.Param("date")
@@ -128,7 +148,7 @@ func GetByDateMeta(c *gin.Context) {
 // @Tags image
 // @Param limit query int false "限制数量" default(30)
 // @Produce json
-// @Success 200 {array} map[string]interface{}
+// @Success 200 {array} ImageMetaResp
 // @Router /images [get]
 func ListImages(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "30")
@@ -232,10 +252,14 @@ func formatMeta(img *model.Image) gin.H {
 	}
 
 	return gin.H{
-		"date":      img.Date,
-		"title":     img.Title,
-		"copyright": img.Copyright,
-		"quiz":      img.Quiz,
-		"variants":  variants,
+		"date":          img.Date,
+		"title":         img.Title,
+		"copyright":     img.Copyright,
+		"copyrightlink": img.CopyrightLink,
+		"quiz":          img.Quiz,
+		"startdate":     img.StartDate,
+		"fullstartdate": img.FullStartDate,
+		"hsh":           img.HSH,
+		"variants":      variants,
 	}
 }

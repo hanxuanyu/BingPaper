@@ -461,8 +461,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.ImageMetaResp"
                         }
                     }
                 }
@@ -518,8 +517,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.ImageMetaResp"
                         }
                     }
                 }
@@ -575,8 +573,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.ImageMetaResp"
                         }
                     }
                 }
@@ -607,8 +604,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "additionalProperties": true
+                                "$ref": "#/definitions/handlers.ImageMetaResp"
                             }
                         }
                     }
@@ -881,6 +877,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.ImageMetaResp": {
+            "type": "object",
+            "properties": {
+                "copyright": {
+                    "type": "string"
+                },
+                "copyrightlink": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "fullstartdate": {
+                    "type": "string"
+                },
+                "hsh": {
+                    "type": "string"
+                },
+                "quiz": {
+                    "type": "string"
+                },
+                "startdate": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "variants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.ImageVariantResp"
+                    }
+                }
+            }
+        },
+        "handlers.ImageVariantResp": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "storage_key": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "variant": {
                     "type": "string"
                 }
             }

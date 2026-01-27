@@ -149,6 +149,11 @@ export interface ImageMeta {
   date?: string
   title?: string
   copyright?: string
+  copyrightlink?: string    // 图片的详细版权链接（指向 Bing 搜索页面）
+  quiz?: string             // 旧字段，保留向后兼容
+  startdate?: string        // 图片的发布开始日期（格式：YYYYMMDD）
+  fullstartdate?: string    // 图片的完整发布时间（格式：YYYYMMDDHHMM）
+  hsh?: string              // 图片的唯一哈希值
   url?: string
   variant?: string
   format?: string

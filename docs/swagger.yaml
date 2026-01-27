@@ -178,6 +178,42 @@ definitions:
     required:
     - name
     type: object
+  handlers.ImageMetaResp:
+    properties:
+      copyright:
+        type: string
+      copyrightlink:
+        type: string
+      date:
+        type: string
+      fullstartdate:
+        type: string
+      hsh:
+        type: string
+      quiz:
+        type: string
+      startdate:
+        type: string
+      title:
+        type: string
+      variants:
+        items:
+          $ref: '#/definitions/handlers.ImageVariantResp'
+        type: array
+    type: object
+  handlers.ImageVariantResp:
+    properties:
+      format:
+        type: string
+      size:
+        type: integer
+      storage_key:
+        type: string
+      url:
+        type: string
+      variant:
+        type: string
+    type: object
   handlers.LoginRequest:
     properties:
       password:
@@ -500,8 +536,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.ImageMetaResp'
       summary: 获取指定日期图片元数据
       tags:
       - image
@@ -538,8 +573,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.ImageMetaResp'
       summary: 获取随机图片元数据
       tags:
       - image
@@ -576,8 +610,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.ImageMetaResp'
       summary: 获取今日图片元数据
       tags:
       - image
@@ -597,8 +630,7 @@ paths:
           description: OK
           schema:
             items:
-              additionalProperties: true
-              type: object
+              $ref: '#/definitions/handlers.ImageMetaResp'
             type: array
       summary: 获取图片列表
       tags:

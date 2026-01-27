@@ -49,10 +49,10 @@
           {{ image.copyright }}
         </p>
 
-        <!-- Quiz 链接 -->
+        <!-- 版权详情链接 -->
         <a 
-          v-if="image.quiz"
-          :href="getBingQuizUrl(image.quiz)"
+          v-if="image.copyrightlink"
+          :href="image.copyrightlink"
           target="_blank"
           class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-all group"
         >
@@ -175,10 +175,7 @@ const getFullImageUrl = () => {
   return bingPaperApi.getImageUrlByDate(currentDate.value, 'UHD', 'jpg')
 }
 
-// 获取必应 quiz URL
-const getBingQuizUrl = (quiz: string) => {
-  return `https://www.bing.com${quiz}`
-}
+// copyrightlink 现在是完整的 URL，无需额外处理
 
 // 返回首页
 const goBack = () => {

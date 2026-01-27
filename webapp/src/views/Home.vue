@@ -40,8 +40,8 @@
                 查看大图
               </button>
               <button 
-                v-if="todayImage.quiz"
-                @click="openQuiz(todayImage.quiz)"
+                v-if="todayImage.copyrightlink"
+                @click="openCopyrightLink(todayImage.copyrightlink)"
                 class="px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all border border-white/30"
               >
                 了解更多
@@ -145,7 +145,7 @@
             </router-link>
             
             <a 
-              href="https://github.com" 
+              href="https://github.com/hanxuanyu/BingPaper" 
               target="_blank"
               class="text-white/60 hover:text-white transition-colors text-sm flex items-center gap-2"
             >
@@ -200,11 +200,10 @@ const viewImage = (date: string) => {
   router.push(`/image/${date}`)
 }
 
-// 打开必应 quiz 链接
-const openQuiz = (quiz: string) => {
-  // 拼接完整的必应地址
-  const bingUrl = `https://www.bing.com${quiz}`
-  window.open(bingUrl, '_blank')
+// 打开版权详情链接
+const openCopyrightLink = (link: string) => {
+  // copyrightlink 是完整的 URL，直接打开
+  window.open(link, '_blank')
 }
 </script>
 
@@ -213,6 +212,7 @@ const openQuiz = (quiz: string) => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   overflow: hidden;
 }
 </style>

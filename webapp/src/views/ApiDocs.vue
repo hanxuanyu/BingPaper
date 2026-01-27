@@ -294,7 +294,7 @@
         <div class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
           <p class="text-white/70 mb-4">获取图片的元数据信息（标题、版权、日期等），只返回 JSON 数据不返回图片</p>
           
-          <div class="space-y-3">
+          <div class="space-y-3 mb-6">
             <div class="flex items-center gap-3 text-sm">
               <code class="text-blue-400 font-mono">/image/today/meta</code>
               <span class="text-white/50">-</span>
@@ -314,6 +314,45 @@
               <code class="text-blue-400 font-mono">/images?limit=30</code>
               <span class="text-white/50">-</span>
               <span class="text-white/60">图片列表（支持分页）</span>
+            </div>
+          </div>
+
+          <!-- 元数据字段说明 -->
+          <div class="mt-6 pt-6 border-t border-white/10">
+            <h4 class="text-white/80 font-semibold mb-4">响应字段说明</h4>
+            <div class="space-y-3 text-sm">
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">date</code>
+                <span class="text-white/60">图片日期（格式：YYYY-MM-DD）</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">title</code>
+                <span class="text-white/60">图片标题</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">copyright</code>
+                <span class="text-white/60">版权信息</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">copyrightlink</code>
+                <span class="text-white/60">版权详情链接（指向 Bing 搜索页面）⭐ 新增</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">startdate</code>
+                <span class="text-white/60">发布开始日期（格式：YYYYMMDD）⭐ 新增</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">fullstartdate</code>
+                <span class="text-white/60">完整发布时间（格式：YYYYMMDDHHMM）⭐ 新增</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">hsh</code>
+                <span class="text-white/60">图片唯一哈希值 ⭐ 新增</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">quiz</code>
+                <span class="text-white/60">必应 quiz 链接（已废弃，建议使用 copyrightlink）</span>
+              </div>
             </div>
           </div>
         </div>

@@ -38,6 +38,7 @@ type BingImage struct {
 	CopyrightLink string `json:"copyrightlink"`
 	Title         string `json:"title"`
 	Quiz          string `json:"quiz"`
+	HSH           string `json:"hsh"`
 }
 
 type Fetcher struct {
@@ -111,11 +112,15 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage) error {
 
 	// 创建 DB 记录
 	dbImg := model.Image{
-		Date:      dateStr,
-		Title:     bingImg.Title,
-		Copyright: bingImg.Copyright,
-		URLBase:   bingImg.URLBase,
-		Quiz:      bingImg.Quiz,
+		Date:          dateStr,
+		Title:         bingImg.Title,
+		Copyright:     bingImg.Copyright,
+		CopyrightLink: bingImg.CopyrightLink,
+		URLBase:       bingImg.URLBase,
+		Quiz:          bingImg.Quiz,
+		StartDate:     bingImg.Startdate,
+		FullStartDate: bingImg.Fullstartdate,
+		HSH:           bingImg.HSH,
 	}
 
 	if err := repo.DB.Clauses(clause.OnConflict{
