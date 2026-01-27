@@ -80,7 +80,7 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 		path := c.Request.URL.Path
 
 		// 如果请求的是 API 或 Swagger，则不处理静态资源 (让其返回 404)
-		if strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/swagger") {
+		if strings.HasPrefix(path, "/api/v1") || strings.HasPrefix(path, "/swagger") {
 			return
 		}
 
