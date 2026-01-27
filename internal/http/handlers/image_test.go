@@ -38,7 +38,7 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 		c, _ := gin.CreateTestContext(w)
 		c.Request, _ = http.NewRequest("GET", "/api/v1/image/today?variant=UHD", nil)
 
-		handleImageResponse(c, img)
+		handleImageResponse(c, img, 0)
 
 		assert.Equal(t, http.StatusFound, w.Code)
 		assert.Contains(t, w.Header().Get("Location"), "bing.com")
