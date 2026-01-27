@@ -36,6 +36,31 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	// 2. 初始化日志
 	util.InitLogger(cfg.Log.Level)
 
+	// 输出配置信息
+	util.Logger.Info("Application configuration loaded",
+		zap.String("config_file", config.GetRawViper().ConfigFileUsed()),
+		zap.String("db_type", cfg.DB.Type),
+		zap.String("storage_type", cfg.Storage.Type),
+		zap.Int("server_port", cfg.Server.Port),
+	)
+
+	// 根据存储类型输出更多信息
+	switch cfg.Storage.Type {
+	case "s3":
+		util.Logger.Info("S3 storage info",
+			zap.String("endpoint", cfg.Storage.S3.Endpoint),
+			zap.String("bucket", cfg.Storage.S3.Bucket),
+		)
+	case "webdav":
+		util.Logger.Info("WebDAV storage info",
+			zap.String("url", cfg.Storage.WebDAV.URL),
+		)
+	default:
+		util.Logger.Info("Local storage info",
+			zap.String("root", cfg.Storage.Local.Root),
+		)
+	}
+
 	// 3. 初始化数据库
 	if err := repo.InitDB(); err != nil {
 		util.Logger.Fatal("Failed to initialize database")
