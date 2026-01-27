@@ -1,7 +1,7 @@
 $AppName = "BingPaper"
 $OutputDir = "output"
 
-Write-Host "å¼€å§‹æ„å»º $AppName å¤šå¹³å°äºŒè¿›åˆ¶æ–‡ä»¶..."
+Write-Host "¿ªÊ¼¹¹½¨ $AppName ¶àÆ½Ì¨¶ş½øÖÆÎÄ¼ş..."
 
 if (Test-Path $OutputDir) {
     Remove-Item -Recurse -Force $OutputDir
@@ -28,7 +28,7 @@ foreach ($Platform in $Platforms) {
         $BinaryName = "$OutputName.exe"
     }
     
-    Write-Host "æ­£åœ¨ç¼–è¯‘ $OS/$Arch..."
+    Write-Host "ÕıÔÚ±àÒë $OS/$Arch..."
     
     $PackageDir = Join-Path $OutputDir $OutputName
     if (-not (Test-Path $PackageDir)) {
@@ -41,7 +41,7 @@ foreach ($Platform in $Platforms) {
     go build -o (Join-Path $PackageDir $BinaryName) main.go
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "  $OS/$Arch ç¼–è¯‘æˆåŠŸ"
+        Write-Host "  $OS/$Arch ±àÒë³É¹¦"
         
         Copy-Item -Recurse "web" $PackageDir\
         Copy-Item "config.example.yaml" $PackageDir\
@@ -53,9 +53,9 @@ foreach ($Platform in $Platforms) {
         Remove-Item -Recurse -Force $OutputName
         Set-Location $CurrentDir
         
-        Write-Host "  $OS/$Arch æ‰“åŒ…å®Œæˆ: ${OutputName}.tar.gz"
+        Write-Host "  $OS/$Arch ´ò°üÍê³É: ${OutputName}.tar.gz"
     } else {
-        Write-Host "  $OS/$Arch ç¼–è¯‘å¤±è´¥"
+        Write-Host "  $OS/$Arch ±àÒëÊ§°Ü"
         if (Test-Path $PackageDir) {
             Remove-Item -Recurse -Force $PackageDir
         }
@@ -63,5 +63,5 @@ foreach ($Platform in $Platforms) {
 }
 
 Write-Host "----------------------------------------"
-Write-Host "å¤šå¹³å°æ‰“åŒ…å®Œæˆï¼è¾“å‡ºç›®å½•: $OutputDir"
+Write-Host "¶àÆ½Ì¨´ò°üÍê³É£¡Êä³öÄ¿Â¼: $OutputDir"
 Get-ChildItem -Recurse $OutputDir
