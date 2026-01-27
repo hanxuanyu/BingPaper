@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Build output (to parent directory)
+../web
+
+# TypeScript compiled files (should not be generated in Vite projects)
+src/**/*.js
+src/**/*.js.map
+
+# Environment variables (keep .env for defaults, ignore local overrides)
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

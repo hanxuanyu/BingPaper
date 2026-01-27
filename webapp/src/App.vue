@@ -1,11 +1,10 @@
 <script setup lang="ts">
   import 'vue-sonner/style.css'
-  import ComponentShowcase from './views/ComponentShowcase.vue'
 </script>
 
 <template>
   <div id="app">
-    <ComponentShowcase />
+    <RouterView />
   </div>
 </template>
 
@@ -19,5 +18,6 @@
 html, body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 </style>
