@@ -30,8 +30,8 @@ git pull origin master
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 检查本地和远端是否一致
-$Local = git rev-parse @
-$Remote = git rev-parse @{u}
+$Local = git rev-parse "@"
+$Remote = git rev-parse "@{u}"
 
 if ($Local -ne $Remote) {
     Write-Host "Error: Local branch is not in sync with remote. Please push your changes first." -ForegroundColor Red
