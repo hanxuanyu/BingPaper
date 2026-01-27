@@ -18,7 +18,7 @@
 
 ### 1. 配置
 
-复制示例配置文件到 `data` 目录并根据需要修改：
+复制示例配置文件到 `data` 目录并根据需要修改。详细配置说明请参考 [CONFIG.md](CONFIG.md)。
 
 ```bash
 mkdir -p data
