@@ -101,3 +101,5 @@ BingPaper 支持通过配置文件（YAML）和环境变量进行配置。
 - `BINGPAPER_STORAGE_TYPE=s3`
 - `BINGPAPER_STORAGE_S3_BUCKET=my-images`
 - `BINGPAPER_ADMIN_PASSWORD_BCRYPT="$2a$10$..."`
+- `HOST_PORT=8080` (仅限 Docker Compose 部署，控制宿主机映射到外部的端口)
+- `BINGPAPER_SERVER_PORT=8080` (控制应用监听端口及容器内部端口)

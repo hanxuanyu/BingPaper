@@ -8,12 +8,12 @@ services:
     container_name: bingpaper
     restart: always
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8080}:${BINGPAPER_SERVER_PORT:-8080}"
     volumes:
       - ./data:/app/data
     environment:
       - TZ=Asia/Shanghai
-      - BINGPAPER_SERVER_PORT=8080
+      - BINGPAPER_SERVER_PORT=${BINGPAPER_SERVER_PORT:-8080}
       - BINGPAPER_LOG_LEVEL=info
       - BINGPAPER_API_MODE=local
       - BINGPAPER_CRON_ENABLED=true
