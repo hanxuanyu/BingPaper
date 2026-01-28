@@ -36,6 +36,20 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	// 2. 初始化日志
 	util.InitLogger(cfg.Log)
 
+	// 以 debug 级别输出配置加载详情和环境变量覆盖情况
+	util.Logger.Debug("Configuration loading details",
+		zap.String("config_file", config.GetRawViper().ConfigFileUsed()),
+	)
+	envOverrides := config.GetEnvOverrides()
+	if len(envOverrides) > 0 {
+		for _, override := range envOverrides {
+			util.Logger.Debug("Environment variable override applied", zap.String("detail", override))
+		}
+	} else {
+		util.Logger.Debug("No environment variable overrides detected")
+	}
+	util.Logger.Debug("Full effective configuration:\n" + config.GetFormattedSettings())
+
 	// 输出配置信息
 	util.Logger.Info("Application configuration loaded")
 	util.Logger.Info("├─ Config file", zap.String("path", config.GetRawViper().ConfigFileUsed()))

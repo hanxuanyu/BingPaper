@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -156,7 +157,7 @@ func Init(configPath string) error {
 	v.SetDefault("log.db_log_level", "info")
 	v.SetDefault("api.mode", "local")
 	v.SetDefault("cron.enabled", true)
-	v.SetDefault("cron.daily_spec", "0 10 * * *")
+	v.SetDefault("cron.daily_spec", "20 8-23/4 * * *")
 	v.SetDefault("retention.days", 0)
 	v.SetDefault("db.type", "sqlite")
 	v.SetDefault("db.dsn", "data/bing_paper.db")
@@ -252,6 +253,38 @@ func SaveConfig(cfg *Config) error {
 
 func GetRawViper() *viper.Viper {
 	return v
+}
+
+// GetAllSettings 返回所有生效配置项
+func GetAllSettings() map[string]interface{} {
+	return v.AllSettings()
+}
+
+// GetFormattedSettings 以 key: value 形式返回所有配置项的字符串
+func GetFormattedSettings() string {
+	keys := v.AllKeys()
+	sort.Strings(keys)
+	var sb strings.Builder
+	for _, k := range keys {
+		sb.WriteString(fmt.Sprintf("%s: %v\n", k, v.Get(k)))
+	}
+	return sb.String()
+}
+
+// GetEnvOverrides 返回环境变量覆盖详情（已排序）
+func GetEnvOverrides() []string {
+	var overrides []string
+	keys := v.AllKeys()
+	sort.Strings(keys)
+	for _, key := range keys {
+		// 根据 viper 的配置生成对应的环境变量名
+		// Prefix: BINGPAPER, KeyReplacer: . -> _
+		envKey := strings.ToUpper(fmt.Sprintf("BINGPAPER_%s", strings.ReplaceAll(key, ".", "_")))
+		if val, ok := os.LookupEnv(envKey); ok {
+			overrides = append(overrides, fmt.Sprintf("%s: %s=%s", key, envKey, val))
+		}
+	}
+	return overrides
 }
 
 func GetTokenTTL() time.Duration {
