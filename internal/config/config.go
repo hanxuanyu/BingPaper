@@ -10,38 +10,39 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	Log       LogConfig       `mapstructure:"log"`
-	API       APIConfig       `mapstructure:"api"`
-	Cron      CronConfig      `mapstructure:"cron"`
-	Retention RetentionConfig `mapstructure:"retention"`
-	DB        DBConfig        `mapstructure:"db"`
-	Storage   StorageConfig   `mapstructure:"storage"`
-	Admin     AdminConfig     `mapstructure:"admin"`
-	Token     TokenConfig     `mapstructure:"token"`
-	Feature   FeatureConfig   `mapstructure:"feature"`
-	Web       WebConfig       `mapstructure:"web"`
+	Server    ServerConfig    `mapstructure:"server" yaml:"server"`
+	Log       LogConfig       `mapstructure:"log" yaml:"log"`
+	API       APIConfig       `mapstructure:"api" yaml:"api"`
+	Cron      CronConfig      `mapstructure:"cron" yaml:"cron"`
+	Retention RetentionConfig `mapstructure:"retention" yaml:"retention"`
+	DB        DBConfig        `mapstructure:"db" yaml:"db"`
+	Storage   StorageConfig   `mapstructure:"storage" yaml:"storage"`
+	Admin     AdminConfig     `mapstructure:"admin" yaml:"admin"`
+	Token     TokenConfig     `mapstructure:"token" yaml:"token"`
+	Feature   FeatureConfig   `mapstructure:"feature" yaml:"feature"`
+	Web       WebConfig       `mapstructure:"web" yaml:"web"`
 }
 
 type ServerConfig struct {
-	Port    int    `mapstructure:"port"`
-	BaseURL string `mapstructure:"base_url"`
+	Port    int    `mapstructure:"port" yaml:"port"`
+	BaseURL string `mapstructure:"base_url" yaml:"base_url"`
 }
 
 type LogConfig struct {
-	Level      string `mapstructure:"level"`
-	Filename   string `mapstructure:"filename"`     // 业务日志文件名
-	DBFilename string `mapstructure:"db_filename"`  // 数据库日志文件名
-	MaxSize    int    `mapstructure:"max_size"`     // 每个日志文件最大大小 (MB)
-	MaxBackups int    `mapstructure:"max_backups"`  // 保留旧日志文件最大个数
-	MaxAge     int    `mapstructure:"max_age"`      // 保留旧日志文件最大天数
-	Compress   bool   `mapstructure:"compress"`     // 是否压缩旧日志文件
-	LogConsole bool   `mapstructure:"log_console"`  // 是否同时输出到控制台
-	ShowDBLog  bool   `mapstructure:"show_db_log"`  // 是否在控制台显示数据库日志
-	DBLogLevel string `mapstructure:"db_log_level"` // 数据库日志级别: debug, info, warn, error
+	Level      string `mapstructure:"level" yaml:"level"`
+	Filename   string `mapstructure:"filename" yaml:"filename"`         // 业务日志文件名
+	DBFilename string `mapstructure:"db_filename" yaml:"db_filename"`   // 数据库日志文件名
+	MaxSize    int    `mapstructure:"max_size" yaml:"max_size"`         // 每个日志文件最大大小 (MB)
+	MaxBackups int    `mapstructure:"max_backups" yaml:"max_backups"`   // 保留旧日志文件最大个数
+	MaxAge     int    `mapstructure:"max_age" yaml:"max_age"`           // 保留旧日志文件最大天数
+	Compress   bool   `mapstructure:"compress" yaml:"compress"`         // 是否压缩旧日志文件
+	LogConsole bool   `mapstructure:"log_console" yaml:"log_console"`   // 是否同时输出到控制台
+	ShowDBLog  bool   `mapstructure:"show_db_log" yaml:"show_db_log"`   // 是否在控制台显示数据库日志
+	DBLogLevel string `mapstructure:"db_log_level" yaml:"db_log_level"` // 数据库日志级别: debug, info, warn, error
 }
 
 func (c LogConfig) GetLevel() string      { return c.Level }
@@ -56,65 +57,65 @@ func (c LogConfig) GetShowDBLog() bool    { return c.ShowDBLog }
 func (c LogConfig) GetDBLogLevel() string { return c.DBLogLevel }
 
 type APIConfig struct {
-	Mode string `mapstructure:"mode"` // local | redirect
+	Mode string `mapstructure:"mode" yaml:"mode"` // local | redirect
 }
 
 type CronConfig struct {
-	Enabled   bool   `mapstructure:"enabled"`
-	DailySpec string `mapstructure:"daily_spec"`
+	Enabled   bool   `mapstructure:"enabled" yaml:"enabled"`
+	DailySpec string `mapstructure:"daily_spec" yaml:"daily_spec"`
 }
 
 type RetentionConfig struct {
-	Days int `mapstructure:"days"`
+	Days int `mapstructure:"days" yaml:"days"`
 }
 
 type DBConfig struct {
-	Type string `mapstructure:"type"` // sqlite/mysql/postgres
-	DSN  string `mapstructure:"dsn"`
+	Type string `mapstructure:"type" yaml:"type"` // sqlite/mysql/postgres
+	DSN  string `mapstructure:"dsn" yaml:"dsn"`
 }
 
 type StorageConfig struct {
-	Type   string       `mapstructure:"type"` // local/s3/webdav
-	Local  LocalConfig  `mapstructure:"local"`
-	S3     S3Config     `mapstructure:"s3"`
-	WebDAV WebDAVConfig `mapstructure:"webdav"`
+	Type   string       `mapstructure:"type" yaml:"type"` // local/s3/webdav
+	Local  LocalConfig  `mapstructure:"local" yaml:"local"`
+	S3     S3Config     `mapstructure:"s3" yaml:"s3"`
+	WebDAV WebDAVConfig `mapstructure:"webdav" yaml:"webdav"`
 }
 
 type LocalConfig struct {
-	Root string `mapstructure:"root"`
+	Root string `mapstructure:"root" yaml:"root"`
 }
 
 type S3Config struct {
-	Endpoint        string `mapstructure:"endpoint"`
-	Region          string `mapstructure:"region"`
-	Bucket          string `mapstructure:"bucket"`
-	AccessKey       string `mapstructure:"access_key"`
-	SecretKey       string `mapstructure:"secret_key"`
-	PublicURLPrefix string `mapstructure:"public_url_prefix"`
-	ForcePathStyle  bool   `mapstructure:"force_path_style"`
+	Endpoint        string `mapstructure:"endpoint" yaml:"endpoint"`
+	Region          string `mapstructure:"region" yaml:"region"`
+	Bucket          string `mapstructure:"bucket" yaml:"bucket"`
+	AccessKey       string `mapstructure:"access_key" yaml:"access_key"`
+	SecretKey       string `mapstructure:"secret_key" yaml:"secret_key"`
+	PublicURLPrefix string `mapstructure:"public_url_prefix" yaml:"public_url_prefix"`
+	ForcePathStyle  bool   `mapstructure:"force_path_style" yaml:"force_path_style"`
 }
 
 type WebDAVConfig struct {
-	URL             string `mapstructure:"url"`
-	Username        string `mapstructure:"username"`
-	Password        string `mapstructure:"password"`
-	PublicURLPrefix string `mapstructure:"public_url_prefix"`
+	URL             string `mapstructure:"url" yaml:"url"`
+	Username        string `mapstructure:"username" yaml:"username"`
+	Password        string `mapstructure:"password" yaml:"password"`
+	PublicURLPrefix string `mapstructure:"public_url_prefix" yaml:"public_url_prefix"`
 }
 
 type AdminConfig struct {
-	PasswordBcrypt string `mapstructure:"password_bcrypt"`
+	PasswordBcrypt string `mapstructure:"password_bcrypt" yaml:"password_bcrypt"`
 }
 
 type TokenConfig struct {
-	DefaultTTL string `mapstructure:"default_ttl"`
+	DefaultTTL string `mapstructure:"default_ttl" yaml:"default_ttl"`
 }
 
 type FeatureConfig struct {
-	WriteDailyFiles bool `mapstructure:"write_daily_files"`
+	WriteDailyFiles bool `mapstructure:"write_daily_files" yaml:"write_daily_files"`
 }
 
 type WebConfig struct {
-	Path string `mapstructure:"path"`
+	Path string `mapstructure:"path" yaml:"path"`
 }
 
 // Bing 默认配置 (内置)
@@ -193,8 +194,13 @@ func Init(configPath string) error {
 			targetConfigPath = "data/config.yaml"
 		}
 		fmt.Printf("Config file not found, creating default config at %s\n", targetConfigPath)
-		if err := v.SafeWriteConfigAs(targetConfigPath); err != nil {
-			fmt.Printf("Warning: Failed to create default config file: %v\n", err)
+
+		var defaultCfg Config
+		if err := v.Unmarshal(&defaultCfg); err == nil {
+			data, _ := yaml.Marshal(&defaultCfg)
+			if err := os.WriteFile(targetConfigPath, data, 0644); err != nil {
+				fmt.Printf("Warning: Failed to create default config file: %v\n", err)
+			}
 		}
 	}
 
@@ -237,18 +243,29 @@ func GetConfig() *Config {
 }
 
 func SaveConfig(cfg *Config) error {
-	v.Set("server", cfg.Server)
-	v.Set("log", cfg.Log)
-	v.Set("api", cfg.API)
-	v.Set("cron", cfg.Cron)
-	v.Set("retention", cfg.Retention)
-	v.Set("db", cfg.DB)
-	v.Set("storage", cfg.Storage)
-	v.Set("admin", cfg.Admin)
-	v.Set("token", cfg.Token)
-	v.Set("feature", cfg.Feature)
-	v.Set("web", cfg.Web)
-	return v.WriteConfig()
+	configLock.Lock()
+	defer configLock.Unlock()
+
+	// 1. 使用 yaml.v3 序列化，它会尊重结构体字段顺序及 yaml 标签
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %v", err)
+	}
+
+	// 2. 获取当前使用的配置文件路径
+	targetPath := v.ConfigFileUsed()
+	if targetPath == "" {
+		targetPath = "data/config.yaml" // 默认回退路径
+	}
+
+	// 3. 直接写入文件，绕过 viper 的字母序排序逻辑
+	if err := os.WriteFile(targetPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %v", err)
+	}
+
+	// 4. 同步更新内存中的全局配置对象
+	GlobalConfig = cfg
+	return nil
 }
 
 func GetRawViper() *viper.Viper {
