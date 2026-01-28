@@ -108,11 +108,18 @@ export class ApiClient {
       // 检查响应状态
       if (!response.ok) {
         const errorData = await this.parseResponse(response)
-        throw new ApiError(
+        const apiError = new ApiError(
           errorData?.message || `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           errorData
         )
+        
+        // 401 未授权错误，自动跳转到登录页
+        if (response.status === 401) {
+          this.handle401Error()
+        }
+        
+        throw apiError
       }
 
       return await this.parseResponse(response)
@@ -127,6 +134,24 @@ export class ApiClient {
       }
       
       throw new ApiError('Unknown error occurred', 0)
+    }
+  }
+
+  /**
+   * 处理 401 错误
+   */
+  private handle401Error() {
+    // 清除本地存储的 token
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_token_expires')
+    this.clearAuthToken()
+    
+    // 只有在管理页面时才跳转到登录页
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      // 避免重复跳转
+      if (!window.location.pathname.includes('/admin/login')) {
+        window.location.href = '/admin/login'
+      }
     }
   }
 

@@ -50,97 +50,97 @@ export interface ChangePasswordRequest {
 // ===== 配置相关 =====
 
 export interface Config {
-  admin: AdminConfig
-  api: APIConfig
-  cron: CronConfig
-  db: DBConfig
-  feature: FeatureConfig
-  log: LogConfig
-  retention: RetentionConfig
-  server: ServerConfig
-  storage: StorageConfig
-  token: TokenConfig
-  web: WebConfig
+  Server: ServerConfig
+  Log: LogConfig
+  API: APIConfig
+  Cron: CronConfig
+  Retention: RetentionConfig
+  DB: DBConfig
+  Storage: StorageConfig
+  Admin: AdminConfig
+  Token: TokenConfig
+  Feature: FeatureConfig
+  Web: WebConfig
 }
 
 export interface AdminConfig {
-  passwordBcrypt: string
+  PasswordBcrypt: string
 }
 
 export interface APIConfig {
-  mode: string // 'local' | 'redirect'
+  Mode: string // 'local' | 'redirect'
 }
 
 export interface CronConfig {
-  enabled: boolean
-  dailySpec: string
+  Enabled: boolean
+  DailySpec: string
 }
 
 export interface DBConfig {
-  type: string // 'sqlite' | 'mysql' | 'postgres'
-  dsn: string
+  Type: string // 'sqlite' | 'mysql' | 'postgres'
+  DSN: string
 }
 
 export interface FeatureConfig {
-  writeDailyFiles: boolean
+  WriteDailyFiles: boolean
 }
 
 export interface LogConfig {
-  level: string
-  filename: string
-  dbfilename: string
-  dblogLevel: string
-  logConsole: boolean
-  showDBLog: boolean
-  maxSize: number
-  maxAge: number
-  maxBackups: number
-  compress: boolean
+  Level: string
+  Filename: string
+  DBFilename: string
+  DBLogLevel: string
+  LogConsole: boolean
+  ShowDBLog: boolean
+  MaxSize: number
+  MaxAge: number
+  MaxBackups: number
+  Compress: boolean
 }
 
 export interface RetentionConfig {
-  days: number
+  Days: number
 }
 
 export interface ServerConfig {
-  port: number
-  baseURL: string
+  Port: number
+  BaseURL: string
 }
 
 export interface StorageConfig {
-  type: string // 'local' | 's3' | 'webdav'
-  local: LocalConfig
-  s3: S3Config
-  webDAV: WebDAVConfig
+  Type: string // 'local' | 's3' | 'webdav'
+  Local: LocalConfig
+  S3: S3Config
+  WebDAV: WebDAVConfig
 }
 
 export interface LocalConfig {
-  root: string
+  Root: string
 }
 
 export interface S3Config {
-  endpoint: string
-  accessKey: string
-  secretKey: string
-  bucket: string
-  region: string
-  forcePathStyle: boolean
-  publicURLPrefix: string
+  Endpoint: string
+  AccessKey: string
+  SecretKey: string
+  Bucket: string
+  Region: string
+  ForcePathStyle: boolean
+  PublicURLPrefix: string
 }
 
 export interface WebDAVConfig {
-  url: string
-  username: string
-  password: string
-  publicURLPrefix: string
+  URL: string
+  Username: string
+  Password: string
+  PublicURLPrefix: string
 }
 
 export interface TokenConfig {
-  defaultTTL: string
+  DefaultTTL: string
 }
 
 export interface WebConfig {
-  path: string
+  Path: string
 }
 
 // ===== 图片相关 =====
@@ -157,7 +157,16 @@ export interface ImageMeta {
   url?: string
   variant?: string
   format?: string
+  variants?: ImageVariantResp[]  // 图片变体列表
   [key: string]: any
+}
+
+export interface ImageVariantResp {
+  variant: string      // 分辨率变体 (UHD, 1920x1080, 等)
+  format: string       // 格式 (jpg)
+  url: string          // 访问 URL
+  storage_key: string  // 存储键
+  size: number         // 文件大小（字节）
 }
 
 export interface ImageListParams extends PaginationParams {

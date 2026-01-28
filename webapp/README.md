@@ -15,6 +15,7 @@ BingPaper 的前端 Web 应用，使用 Vue 3 + TypeScript + Vite 构建。
 - ⚡ 浏览器缓存优化（内容哈希 + 代码分割）
 - 🌐 支持自定义后端路径
 - 📁 自动输出到上级目录的 web 文件夹
+- 🔐 完整的管理后台系统（Token 管理、定时任务、系统配置）
 
 ## 快速开始
 
@@ -90,6 +91,77 @@ const images = await bingPaperApi.getImages({ limit: 10 })
 ## 构建说明
 
 详细的构建配置和部署说明请参阅 [BUILD.md](./BUILD.md)
+
+## 项目结构
+
+```
+src/
+├── assets/           # 静态资源
+├── components/       # Vue 组件
+│   └── ui/          # shadcn-vue UI 组件库
+├── composables/      # 可组合函数
+│   └── useImages.ts # 图片管理相关逻辑
+├── lib/             # 核心库
+│   ├── api-config.ts    # API 配置
+│   ├── api-service.ts   # API 服务类
+│   ├── api-types.ts     # TypeScript 类型定义
+│   ├── http-client.ts   # HTTP 客户端
+│   └── utils.ts         # 工具函数
+├── router/          # 路由配置
+│   └── index.ts
+├── views/           # 页面组件
+│   ├── Home.vue          # 首页
+│   ├── ImageView.vue     # 图片详情页
+│   ├── ApiDocs.vue       # API 文档页
+│   ├── AdminLogin.vue    # 管理员登录页
+│   ├── Admin.vue         # 管理后台主页面
+│   ├── AdminTokens.vue   # Token 管理
+│   ├── AdminTasks.vue    # 定时任务管理
+│   └── AdminConfig.vue   # 系统配置管理
+├── App.vue          # 根组件
+└── main.ts          # 入口文件
+```
+
+## 管理后台
+
+访问 `/admin/login` 进入管理后台登录页面。
+
+### 功能模块
+
+#### 1. Token 管理
+- 查看所有 API Token
+- 创建新的 Token（支持设置过期时间）
+- 启用/禁用 Token
+- 删除 Token
+
+#### 2. 定时任务管理
+- 手动触发图片抓取（可指定抓取天数）
+- 手动触发旧图片清理
+- 查看任务执行历史
+
+#### 3. 系统配置管理
+- **JSON 编辑模式**：直接编辑配置 JSON
+- **表单编辑模式**：通过友好的表单界面修改配置
+- 支持的配置项：
+  - 服务器配置（端口、基础 URL）
+  - API 模式（本地/重定向）
+  - 定时任务配置
+  - 数据库配置
+  - 存储配置（本地/S3/WebDAV）
+  - 图片保留策略
+  - Token 配置
+  - 日志配置
+  - 功能特性开关
+
+#### 4. 密码管理
+- 修改管理员密码
+- 安全退出登录
+
+### 安全特性
+- 基于 JWT Token 的身份验证
+- Token 过期自动跳转登录页
+- 路由守卫保护管理页面
+- 密码修改后强制重新登录
 
 ## 项目结构
 

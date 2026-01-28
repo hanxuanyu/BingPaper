@@ -181,6 +181,9 @@ export class BingPaperApiService {
 // 导出默认实例
 export const bingPaperApi = new BingPaperApiService()
 
+// 为了兼容性，也导出为 apiService
+export const apiService = bingPaperApi
+
 // 导出便捷方法
 export const {
   login,
