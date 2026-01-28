@@ -1,8 +1,11 @@
 # Stage 1: Build Frontend
 FROM --platform=$BUILDPLATFORM node:20-alpine AS node-builder
+ARG NPM_REGISTRY
 WORKDIR /webapp
 # 复制 package.json 和 lock 文件以利用 layer 缓存
 COPY webapp/package*.json ./
+# 如果设置了 NPM_REGISTRY，则配置 npm 镜像
+RUN if [ -n "$NPM_REGISTRY" ]; then npm config set registry $NPM_REGISTRY; fi
 # 使用 npm ci 以获得更快且可重现的构建（如果存在 package-lock.json）
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 # 复制其余源码并构建
@@ -11,6 +14,8 @@ RUN npm run build
 
 # Stage 2: Build Backend
 FROM --platform=$BUILDPLATFORM golang:1.25.5-alpine AS builder
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
 # 安装 Git 以支持某些 Go 模块依赖
 RUN apk add --no-cache git
 WORKDIR /app

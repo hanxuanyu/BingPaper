@@ -1,6 +1,10 @@
 services:
   bingpaper:
-    build: .
+    build:
+      context: .
+      args:
+        - GOPROXY=${GOPROXY:-https://proxy.golang.org,direct}
+        - NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmjs.org/}
     container_name: bingpaper
     restart: always
     ports:
