@@ -7,7 +7,7 @@ output
 scripts
 # docs
 *.md
-docker-compose.yml
+docker-compose.yaml
 Dockerfile
 .dockerignore
 webapp/.vscode

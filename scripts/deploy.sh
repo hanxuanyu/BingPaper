@@ -16,7 +16,7 @@ log() {
 }
 
 # 确保在项目根目录
-if [ ! -f "docker-compose.yml" ]; then
+if [ ! -f "docker-compose.yaml" ]; then
     log "错误: 未能在 $PROJECT_DIR 找到 docker-compose.yml，请确保脚本位置正确。"
     exit 1
 fi
