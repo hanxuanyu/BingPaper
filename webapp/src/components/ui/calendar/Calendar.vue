@@ -238,7 +238,6 @@ const initPanelPosition = () => {
     
     if (isMobile) {
       // 移动端：居中显示
-      const panelWidth = windowWidth - 16 // 左右各8px边距
       const panelHeight = 580 // 估计高度
       panelPos.value = {
         x: 8,
