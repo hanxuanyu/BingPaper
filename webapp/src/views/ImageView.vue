@@ -17,7 +17,11 @@
       </div>
 
       <!-- 顶部工具栏 -->
-      <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6 z-10">
+      <div 
+        v-show="!showCalendar"
+        class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6 z-10 transition-opacity duration-300"
+        :class="{ 'opacity-0 pointer-events-none': showCalendar }"
+      >
         <div class="flex items-center justify-between max-w-7xl mx-auto">
           <button 
             @click="goBack"
@@ -37,11 +41,11 @@
 
       <!-- 信息悬浮层（类似 Windows 聚焦） -->
       <div 
-        v-if="showInfo"
+        v-if="showInfo && !showCalendar"
         ref="infoPanel"
-        class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 transform transition-opacity duration-300 z-10 select-none"
+        class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 transform transition-all duration-300 z-10 select-none"
         :style="{ left: infoPanelPos.x + 'px', top: infoPanelPos.y + 'px' }"
-        :class="{ 'opacity-100': showInfo, 'opacity-0': !showInfo }"
+        :class="{ 'opacity-100': showInfo && !showCalendar, 'opacity-0 pointer-events-none': showCalendar }"
       >
         <!-- 拖动手柄 -->
         <div 
@@ -83,7 +87,11 @@
       </div>
 
       <!-- 底部控制栏 -->
-      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 z-10">
+      <div 
+        v-show="!showCalendar"
+        class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 z-10 transition-opacity duration-300"
+        :class="{ 'opacity-0 pointer-events-none': showCalendar }"
+      >
         <div class="flex items-center justify-between max-w-7xl mx-auto">
           <!-- 日期切换按钮 -->
           <div class="flex items-center gap-4">
@@ -110,20 +118,41 @@
             </button>
           </div>
 
-          <!-- 信息按钮 -->
-          <button 
-            v-if="!showInfo"
-            @click="showInfo = true"
-            class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-all"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span class="hidden sm:inline">显示信息</span>
-          </button>
+          <!-- 右侧按钮组 -->
+          <div class="flex items-center gap-3">
+            <!-- 日历按钮 -->
+            <button 
+              @click="toggleCalendar(true)"
+              class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-all"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span class="hidden sm:inline">日历</span>
+            </button>
+
+            <!-- 信息按钮 -->
+            <button 
+              v-if="!showInfo"
+              @click="showInfo = true"
+              class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white rounded-lg hover:bg-white/20 transition-all"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span class="hidden sm:inline">显示信息</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- 日历弹窗 -->
+    <Calendar 
+      v-if="showCalendar"
+      :selected-date="currentDate"
+      @close="toggleCalendar(false)"
+    />
 
     <!-- 错误状态 -->
     <div v-else-if="error" class="absolute inset-0 flex items-center justify-center">
@@ -141,16 +170,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useImageByDate } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
+import Calendar from '@/components/ui/calendar/Calendar.vue'
 
 const route = useRoute()
 const router = useRouter()
 
+// 从 localStorage 读取日历状态，默认关闭
+const CALENDAR_STATE_KEY = 'imageView_showCalendar'
+
+// 获取初始日历状态
+const getInitialCalendarState = (): boolean => {
+  try {
+    const stored = localStorage.getItem(CALENDAR_STATE_KEY)
+    return stored === 'true'
+  } catch (error) {
+    console.warn('Failed to read calendar state from localStorage:', error)
+    return false
+  }
+}
+
 const currentDate = ref(route.params.date as string)
 const showInfo = ref(true)
+const showCalendar = ref(getInitialCalendarState())
 const navigating = ref(false)
 
 // 前后日期可用性
@@ -273,8 +318,16 @@ const checkAdjacentDates = async () => {
 // 初始化位置
 initPanelPosition()
 
+// 监听showCalendar变化并自动保存到localStorage
+watch(showCalendar, (newValue) => {
+  try {
+    localStorage.setItem(CALENDAR_STATE_KEY, String(newValue))
+  } catch (error) {
+    console.warn('Failed to save calendar state:', error)
+  }
+})
+
 // 监听日期变化，检测前后日期可用性
-import { watch } from 'vue'
 watch(currentDate, () => {
   checkAdjacentDates()
 }, { immediate: true })
@@ -337,6 +390,11 @@ const nextDay = () => {
   }, 500)
 }
 
+// 切换日历状态（watch会自动保存）
+const toggleCalendar = (state: boolean) => {
+  showCalendar.value = state
+}
+
 // 键盘导航
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft' && hasPreviousDay.value) {
@@ -344,9 +402,15 @@ const handleKeydown = (e: KeyboardEvent) => {
   } else if (e.key === 'ArrowRight' && hasNextDay.value) {
     nextDay()
   } else if (e.key === 'Escape') {
-    goBack()
+    if (showCalendar.value) {
+      toggleCalendar(false)
+    } else {
+      goBack()
+    }
   } else if (e.key === 'i' || e.key === 'I') {
     showInfo.value = !showInfo.value
+  } else if (e.key === 'c' || e.key === 'C') {
+    toggleCalendar(!showCalendar.value)
   }
 }
 

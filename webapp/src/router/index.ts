@@ -17,11 +17,20 @@ const router = createRouter({
       }
     },
     {
-      path: '/image/:date',
+      path: '/image/:date?',
       name: 'ImageView',
       component: ImageView,
       meta: {
         title: '图片详情'
+      },
+      beforeEnter: (to, _from, next) => {
+        // 如果没有提供日期参数，重定向到今天的日期
+        if (!to.params.date) {
+          const today = new Date().toISOString().split('T')[0]
+          next({ path: `/image/${today}`, replace: true })
+        } else {
+          next()
+        }
       }
     },
     {

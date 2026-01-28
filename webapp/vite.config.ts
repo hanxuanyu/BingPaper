@@ -37,14 +37,33 @@ export default defineConfig(({ mode }) => {
           // 入口文件名
           entryFileNames: 'assets/[name]-[hash].js',
           // 手动分割代码
-          manualChunks: {
-            // 将 Vue 相关代码单独打包
-            'vue-vendor': ['vue', 'vue-router'],
-            // 将 UI 组件库单独打包（如果有的话）
-            // 'ui-vendor': ['其他UI库']
+          manualChunks: (id) => {
+            // 将 node_modules 中的依赖分割成不同的 chunk
+            if (id.includes('node_modules')) {
+              // Vue 核心库
+              if (id.includes('vue') || id.includes('vue-router')) {
+                return 'vue-vendor'
+              }
+              // Radix UI / Reka UI 组件库
+              if (id.includes('reka-ui') || id.includes('@vueuse')) {
+                return 'ui-vendor'
+              }
+              // Lucide 图标库
+              if (id.includes('lucide-vue-next')) {
+                return 'icons'
+              }
+              // lunar-javascript 农历库
+              if (id.includes('lunar-javascript')) {
+                return 'lunar'
+              }
+              // 其他 node_modules 依赖
+              return 'vendor'
+            }
           }
         }
-      }
+      },
+      // 增加 chunk 大小警告限制
+      chunkSizeWarningLimit: 1000
     },
     // 开发服务器配置
     server: {
