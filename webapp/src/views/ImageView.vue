@@ -261,7 +261,6 @@ const initPanelPosition = () => {
   if (typeof window !== 'undefined') {
     const bounds = getImageDisplayBounds()
     const panelWidth = Math.min(bounds.width * 0.9, 448) // max-w-md = 448px
-    const bottomControlHeight = 80 // 底部控制栏高度
     
     infoPanelPos.value = {
       x: bounds.left + (bounds.width - panelWidth) / 2,
