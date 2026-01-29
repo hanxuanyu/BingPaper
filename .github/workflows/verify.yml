@@ -42,15 +42,19 @@ jobs:
       - name: Notification
         if: success()
         env:
-          NOTIFY_CURLS: ${{ vars.NOTIFY_CURLS }}
+          NOTIFY_CURLS: ${{ secrets.NOTIFY_CURLS }}
         run: |
           if [ -n "$NOTIFY_CURLS" ]; then
             printf "%s\n" "$NOTIFY_CURLS" | while read -r line; do
               if [ -n "$line" ]; then
-                echo "Executing: $line"
-                if [[ "$line" == curl* ]]; then
+                if [[ "$line" =~ ^[0-9] ]]; then
+                  echo "Pausing for $line ms..."
+                  sleep "$(awk "BEGIN {print $line/1000}")" || true
+                elif [[ "$line" == curl* ]]; then
+                  echo "Executing: $line"
                   eval "$line -w \"\\nHTTP Status: %{http_code}\\n\"" || true
                 else
+                  echo "Executing: $line"
                   eval "$line" || true
                 fi
                 echo ""
