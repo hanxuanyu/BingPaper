@@ -47,7 +47,13 @@ jobs:
           if [ -n "$NOTIFY_CURLS" ]; then
             printf "%s\n" "$NOTIFY_CURLS" | while read -r line; do
               if [ -n "$line" ]; then
-                eval "$line" || true
+                echo "Executing: $line"
+                if [[ "$line" == curl* ]]; then
+                  eval "$line -w \"\\nHTTP Status: %{http_code}\\n\"" || true
+                else
+                  eval "$line" || true
+                fi
+                echo ""
               fi
             done
           fi
