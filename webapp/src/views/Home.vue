@@ -6,42 +6,52 @@
         <div class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
       </div>
       
-      <div v-else-if="todayImage" class="relative h-full w-full group">
+      <div v-else-if="latestImage" class="relative h-full w-full group">
         <!-- 背景图片 -->
         <div class="absolute inset-0">
           <img 
-            :src="getTodayImageUrl()" 
-            :alt="todayImage.title || 'Today\'s Bing Image'"
+            :src="getLatestImageUrl()" 
+            :alt="latestImage.title || 'Latest Bing Image'"
             class="w-full h-full object-cover"
           />
           <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+        </div>
+
+        <!-- 更新提示（仅在非今日图片时显示） - 右上角简约徽章 -->
+        <div v-if="!isToday" class="absolute top-4 right-4 md:top-8 md:right-8 z-20">
+          <div class="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-md rounded-full border border-white/10 text-white/70 text-xs">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>下次更新 {{ nextUpdateTime }}</span>
+          </div>
         </div>
 
         <!-- 内容叠加层 -->
         <div class="relative h-full flex flex-col justify-end p-8 md:p-16 z-10">
           <div class="max-w-4xl space-y-4 transform transition-transform duration-500 group-hover:translate-y-[-10px]">
             <div class="inline-block px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/90 text-sm font-medium">
-              今日精选 · {{ formatDate(todayImage.date) }}
+              {{ isToday ? '今日精选' : '最新图片' }} · {{ formatDate(latestImage.date) }}
             </div>
             
             <h1 class="text-4xl md:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
-              {{ todayImage.title || '必应每日一图' }}
+              {{ latestImage.title || '必应每日一图' }}
             </h1>
             
-            <p v-if="todayImage.copyright" class="text-lg md:text-xl text-white/80 max-w-2xl">
-              {{ todayImage.copyright }}
+            <p v-if="latestImage.copyright" class="text-lg md:text-xl text-white/80 max-w-2xl">
+              {{ latestImage.copyright }}
             </p>
 
             <div class="flex gap-4 pt-4">
               <button 
-                @click="viewImage(todayImage.date!)"
+                @click="viewImage(latestImage.date!)"
                 class="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-white/90 transition-all transform hover:scale-105 shadow-xl"
               >
                 查看大图
               </button>
               <button 
-                v-if="todayImage.copyrightlink"
-                @click="openCopyrightLink(todayImage.copyrightlink)"
+                v-if="latestImage.copyrightlink"
+                @click="openCopyrightLink(latestImage.copyrightlink)"
                 class="px-6 py-3 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all border border-white/30"
               >
                 了解更多
@@ -235,7 +245,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useTodayImage, useImageList } from '@/composables/useImages'
+import { useImageList } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
 import { useRouter } from 'vue-router'
 import {
@@ -248,11 +258,40 @@ import {
 
 const router = useRouter()
 
-// 获取今日图片
-const { image: todayImage, loading: todayLoading } = useTodayImage()
-
 // 获取图片列表（使用服务端分页和筛选，每页15张）
 const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(15)
+
+// 从图片列表获取最新图片作为顶部展示
+const latestImage = computed(() => images.value.length > 0 ? images.value[0] : null)
+const todayLoading = computed(() => loading.value && images.value.length === 0)
+
+// 判断最新图片是否为今天的图片
+const isToday = computed(() => {
+  if (!latestImage.value?.date) return false
+  const imageDate = new Date(latestImage.value.date).toDateString()
+  const today = new Date().toDateString()
+  return imageDate === today
+})
+
+// 计算下次更新时间提示
+const nextUpdateTime = computed(() => {
+  const now = new Date()
+  const hours = now.getHours()
+  
+  // 更新时间点：8:20, 12:20, 16:20, 20:20, 0:20, 4:20
+  const updateHours = [0, 4, 8, 12, 16, 20]
+  const updateMinute = 20
+  
+  // 找到下一个更新时间点
+  for (const hour of updateHours) {
+    if (hours < hour || (hours === hour && now.getMinutes() < updateMinute)) {
+      return `${String(hour).padStart(2, '0')}:${String(updateMinute).padStart(2, '0')}`
+    }
+  }
+  
+  // 如果今天没有下一个更新点，返回明天的第一个更新点
+  return `次日 00:20`
+})
 
 // 筛选相关状态
 const selectedYear = ref('')
@@ -456,9 +495,10 @@ const formatDate = (dateStr?: string) => {
   })
 }
 
-// 获取今日图片 URL
-const getTodayImageUrl = () => {
-  return bingPaperApi.getTodayImageUrl('UHD', 'jpg')
+// 获取最新图片 URL（顶部大图使用UHD高清）
+const getLatestImageUrl = () => {
+  if (!latestImage.value?.date) return ''
+  return bingPaperApi.getImageUrlByDate(latestImage.value.date, 'UHD', 'jpg')
 }
 
 // 获取图片 URL（缩略图 - 使用较小分辨率节省流量）
