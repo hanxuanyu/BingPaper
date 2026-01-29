@@ -51,10 +51,8 @@ jobs:
                   echo "Pausing for $line ms..."
                   sleep "$(awk "BEGIN {print $line/1000}")" || true
                 elif [[ "$line" == curl* ]]; then
-                  echo "Executing: $line"
                   eval "$line -w \"\\nHTTP Status: %{http_code}\\n\"" || true
                 else
-                  echo "Executing: $line"
                   eval "$line" || true
                 fi
                 echo ""
