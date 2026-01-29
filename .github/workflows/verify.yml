@@ -48,7 +48,7 @@ jobs:
             printf "%s\n" "$NOTIFY_CURLS" | while read -r line; do
               if [ -n "$line" ]; then
                 if [[ "$line" =~ ^[0-9] ]]; then
-                  echo "Pausing for $line ms..."
+                  echo "Pausing for $line ms...."
                   sleep "$(awk "BEGIN {print $line/1000}")" || true
                 elif [[ "$line" == curl* ]]; then
                   eval "$line -w \"\\nHTTP Status: %{http_code}\\n\"" || true
