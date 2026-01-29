@@ -258,12 +258,33 @@ import {
 
 const router = useRouter()
 
-// 获取图片列表（使用服务端分页和筛选，每页15张）
+// 顶部最新图片（独立加载，不受筛选影响）
+const latestImage = ref<any>(null)
+const todayLoading = ref(false)
+
+// 历史图片列表（使用服务端分页和筛选，每页15张）
 const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(15)
 
-// 从图片列表获取最新图片作为顶部展示
-const latestImage = computed(() => images.value.length > 0 ? images.value[0] : null)
-const todayLoading = computed(() => loading.value && images.value.length === 0)
+// 加载顶部最新图片
+const loadLatestImage = async () => {
+  todayLoading.value = true
+  try {
+    const params = { page: 1, page_size: 1 }
+    const result = await bingPaperApi.getImages(params)
+    if (result.length > 0) {
+      latestImage.value = result[0]
+    }
+  } catch (error) {
+    console.error('Failed to load latest image:', error)
+  } finally {
+    todayLoading.value = false
+  }
+}
+
+// 初始化加载顶部图片
+onMounted(() => {
+  loadLatestImage()
+})
 
 // 判断最新图片是否为今天的图片
 const isToday = computed(() => {
@@ -306,11 +327,11 @@ let observer: IntersectionObserver | null = null
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 let loadMoreObserver: IntersectionObserver | null = null
 
-// 计算可用的年份列表（基于当前日期生成，从2020年到当前年份）
+// 计算可用的年份列表（基于当前日期生成，计算前20年）
 const availableYears = computed(() => {
   const currentYear = new Date().getFullYear()
   const years: number[] = []
-  for (let year = currentYear; year >= 2020; year--) {
+  for (let year = currentYear; year >= currentYear - 20; year--) {
     years.push(year)
   }
   return years
@@ -463,8 +484,10 @@ const setupLoadMoreObserver = () => {
   }
 }
 
-// 初始化时设置无限滚动
+// 初始化
 onMounted(() => {
+  loadLatestImage()
+  
   if (images.value.length > 0) {
     imageVisibility.value = new Array(images.value.length).fill(false)
     setTimeout(() => {
@@ -525,5 +548,27 @@ const openCopyrightLink = (link: string) => {
   -webkit-box-orient: vertical;
   line-clamp: 2;
   overflow: hidden;
+}
+</style>
+
+<style>
+/* 隐藏滚动条但保持滚动功能 */
+body {
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 </style>

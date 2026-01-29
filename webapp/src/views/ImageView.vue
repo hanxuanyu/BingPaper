@@ -43,9 +43,16 @@
       <div 
         v-if="showInfo && !showCalendar"
         ref="infoPanel"
-        class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 transform transition-all duration-300 z-10 select-none"
-        :style="{ left: infoPanelPos.x + 'px', top: infoPanelPos.y + 'px' }"
-        :class="{ 'opacity-100': showInfo && !showCalendar, 'opacity-0 pointer-events-none': showCalendar }"
+        class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 z-20 select-none"
+        :class="{ 
+          'opacity-100': showInfo && !showCalendar, 
+          'opacity-0 pointer-events-none': showCalendar,
+          'transition-opacity duration-300': !isDragging
+        }"
+        :style="{ 
+          transform: `translate(${infoPanelPos.x}px, ${infoPanelPos.y}px)`,
+          willChange: isDragging ? 'transform' : 'auto'
+        }"
       >
         <!-- 拖动手柄 -->
         <div 
@@ -208,16 +215,57 @@ const infoPanel = ref<HTMLElement | null>(null)
 const infoPanelPos = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
+let animationFrameId: number | null = null
 
-// 初始化浮窗位置（居中偏下）
+// 计算图片实际显示区域（考虑图片宽高比和object-contain）
+const getImageDisplayBounds = () => {
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+  
+  // 必应图片通常是16:9或类似宽高比
+  // 使用UHD分辨率: 1920x1080 (16:9)
+  const imageAspectRatio = 16 / 9
+  const windowAspectRatio = windowWidth / windowHeight
+  
+  let displayWidth: number
+  let displayHeight: number
+  let offsetX: number
+  let offsetY: number
+  
+  if (windowAspectRatio > imageAspectRatio) {
+    // 窗口更宽，图片上下占满，左右留黑边
+    displayHeight = windowHeight
+    displayWidth = displayHeight * imageAspectRatio
+    offsetX = (windowWidth - displayWidth) / 2
+    offsetY = 0
+  } else {
+    // 窗口更高，图片左右占满，上下留黑边
+    displayWidth = windowWidth
+    displayHeight = displayWidth / imageAspectRatio
+    offsetX = 0
+    offsetY = (windowHeight - displayHeight) / 2
+  }
+  
+  return {
+    left: offsetX,
+    top: offsetY,
+    right: offsetX + displayWidth,
+    bottom: offsetY + displayHeight,
+    width: displayWidth,
+    height: displayHeight
+  }
+}
+
+// 初始化浮窗位置（居中偏下，限制在图片显示区域内）
 const initPanelPosition = () => {
   if (typeof window !== 'undefined') {
-    const windowWidth = window.innerWidth
-    const windowHeight = window.innerHeight
-    const panelWidth = Math.min(windowWidth * 0.9, 448) // max-w-md = 448px
+    const bounds = getImageDisplayBounds()
+    const panelWidth = Math.min(bounds.width * 0.9, 448) // max-w-md = 448px
+    const bottomControlHeight = 80 // 底部控制栏高度
+    
     infoPanelPos.value = {
-      x: (windowWidth - panelWidth) / 2,
-      y: windowHeight - 200 // 距底部200px
+      x: bounds.left + (bounds.width - panelWidth) / 2,
+      y: Math.max(bounds.top, bounds.bottom - 280) // 距底部280px，避免与控制栏重叠
     }
   }
 }
@@ -235,42 +283,61 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
     y: clientY - infoPanelPos.value.y
   }
   
-  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mousemove', onDrag, { passive: false })
   document.addEventListener('mouseup', stopDrag)
   document.addEventListener('touchmove', onDrag, { passive: false })
   document.addEventListener('touchend', stopDrag)
 }
 
-// 拖动中
+// 拖动中 - 使用 requestAnimationFrame 优化性能
 const onDrag = (e: MouseEvent | TouchEvent) => {
   if (!isDragging.value) return
   
-  if (e instanceof TouchEvent) {
-    e.preventDefault()
+  e.preventDefault()
+  
+  // 取消之前的动画帧
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId)
   }
   
-  const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
-  const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
-  
-  const newX = clientX - dragStart.value.x
-  const newY = clientY - dragStart.value.y
-  
-  // 限制在视口内
-  if (infoPanel.value) {
-    const rect = infoPanel.value.getBoundingClientRect()
-    const maxX = window.innerWidth - rect.width
-    const maxY = window.innerHeight - rect.height
+  // 使用 requestAnimationFrame 进行节流优化
+  animationFrameId = requestAnimationFrame(() => {
+    const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
+    const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
     
-    infoPanelPos.value = {
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY))
+    const newX = clientX - dragStart.value.x
+    const newY = clientY - dragStart.value.y
+    
+    // 限制在图片实际显示区域内，考虑底部控制栏高度（约80px）
+    if (infoPanel.value) {
+      const rect = infoPanel.value.getBoundingClientRect()
+      const bounds = getImageDisplayBounds()
+      
+      const minX = bounds.left
+      const maxX = bounds.right - rect.width
+      const minY = bounds.top
+      const maxY = bounds.bottom - rect.height - 80 // 预留底部控制栏空间
+      
+      infoPanelPos.value = {
+        x: Math.max(minX, Math.min(newX, maxX)),
+        y: Math.max(minY, Math.min(newY, maxY))
+      }
     }
-  }
+    
+    animationFrameId = null
+  })
 }
 
 // 停止拖动
 const stopDrag = () => {
   isDragging.value = false
+  
+  // 清理动画帧
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+  
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
   document.removeEventListener('touchmove', onDrag)
@@ -430,6 +497,11 @@ onUnmounted(() => {
     document.removeEventListener('mouseup', stopDrag)
     document.removeEventListener('touchmove', onDrag)
     document.removeEventListener('touchend', stopDrag)
+    
+    // 清理动画帧
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId)
+    }
   }
 })
 </script>
