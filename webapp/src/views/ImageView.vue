@@ -1,18 +1,19 @@
 <template>
   <div class="fixed inset-0 bg-black z-50 overflow-hidden">
-    <!-- 加载状态 -->
-    <div v-if="loading" class="absolute inset-0 flex items-center justify-center">
+    <!-- 加载状态（动画过渡中不显示） -->
+    <div v-if="loading && !imageTransitioning" class="absolute inset-0 flex items-center justify-center">
       <div class="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
     </div>
 
     <!-- 主要内容 -->
-    <div v-else-if="image" class="relative h-full w-full">
+    <div v-else-if="image || imageTransitioning" class="relative h-full w-full">
       <!-- 全屏图片 -->
       <div class="absolute inset-0 flex items-center justify-center">
         <img 
           :src="getFullImageUrl()" 
           :alt="image.title || 'Bing Image'"
-          class="max-w-full max-h-full object-contain"
+          class="max-w-full max-h-full object-contain transition-opacity duration-500 ease-in-out"
+          :style="{ opacity: imageOpacity }"
         />
       </div>
 
@@ -204,6 +205,8 @@ const currentDate = ref(route.params.date as string)
 const showInfo = ref(true)
 const showCalendar = ref(getInitialCalendarState())
 const navigating = ref(false)
+const imageOpacity = ref(1)
+const imageTransitioning = ref(false)
 
 // 前后日期可用性
 const hasPreviousDay = ref(true)
@@ -415,6 +418,63 @@ const getFullImageUrl = () => {
   return bingPaperApi.getImageUrlByDate(currentDate.value, 'UHD', 'jpg')
 }
 
+// 预加载图片
+const preloadImage = (url: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = url
+  })
+}
+
+// 预加载图片和数据
+const preloadImageAndData = async (date: string): Promise<void> => {
+  try {
+    // 并行预加载图片和数据
+    const imageUrl = bingPaperApi.getImageUrlByDate(date, 'UHD', 'jpg')
+    await Promise.all([
+      preloadImage(imageUrl),
+      bingPaperApi.getImageMetaByDate(date)
+    ])
+  } catch (error) {
+    console.warn('Failed to preload image or data:', error)
+    // 即使预加载失败也继续
+  }
+}
+
+// 切换日期并带动画
+const switchToDate = async (newDate: string) => {
+  if (imageTransitioning.value) return
+  
+  imageTransitioning.value = true
+  
+  // 1. 淡出当前图片的同时预加载新图片和数据
+  imageOpacity.value = 0
+  const preloadPromise = preloadImageAndData(newDate)
+  
+  // 2. 等待淡出动画完成（500ms）
+  await Promise.all([
+    new Promise(resolve => setTimeout(resolve, 500)),
+    preloadPromise
+  ])
+  
+  // 3. 更新日期（此时图片和数据已经预加载完成）
+  currentDate.value = newDate
+  router.replace(`/image/${newDate}`)
+  
+  // 4. 等待一个微任务，确保 DOM 更新
+  await new Promise(resolve => setTimeout(resolve, 50))
+  
+  // 5. 淡入新图片
+  imageOpacity.value = 1
+  
+  // 6. 等待淡入完成
+  await new Promise(resolve => setTimeout(resolve, 500))
+  
+  imageTransitioning.value = false
+}
+
 // copyrightlink 现在是完整的 URL，无需额外处理
 
 // 返回首页
@@ -423,37 +483,31 @@ const goBack = () => {
 }
 
 // 前一天
-const previousDay = () => {
-  if (navigating.value || !hasPreviousDay.value) return
+const previousDay = async () => {
+  if (navigating.value || !hasPreviousDay.value || imageTransitioning.value) return
   
   navigating.value = true
   const date = new Date(currentDate.value)
   date.setDate(date.getDate() - 1)
   const newDate = date.toISOString().split('T')[0]
   
-  currentDate.value = newDate
-  router.replace(`/image/${newDate}`)
+  await switchToDate(newDate)
   
-  setTimeout(() => {
-    navigating.value = false
-  }, 500)
+  navigating.value = false
 }
 
 // 后一天
-const nextDay = () => {
-  if (navigating.value || !hasNextDay.value) return
+const nextDay = async () => {
+  if (navigating.value || !hasNextDay.value || imageTransitioning.value) return
   
   navigating.value = true
   const date = new Date(currentDate.value)
   date.setDate(date.getDate() + 1)
   const newDate = date.toISOString().split('T')[0]
   
-  currentDate.value = newDate
-  router.replace(`/image/${newDate}`)
+  await switchToDate(newDate)
   
-  setTimeout(() => {
-    navigating.value = false
-  }, 500)
+  navigating.value = false
 }
 
 // 切换日历状态（watch会自动保存）
