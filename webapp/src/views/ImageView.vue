@@ -11,7 +11,7 @@
       <div class="absolute inset-0 flex items-center justify-center">
         <img 
           :src="getFullImageUrl()" 
-          :alt="image.title || 'Bing Image'"
+          :alt="image?.title || 'Bing Image'"
           class="max-w-full max-h-full object-contain transition-opacity duration-500 ease-in-out"
           :style="{ opacity: imageOpacity }"
         />
@@ -35,14 +35,14 @@
           </button>
 
           <div class="text-white/80 text-sm">
-            {{ formatDate(image.date) }}
+            {{ formatDate(image?.date) }}
           </div>
         </div>
       </div>
 
       <!-- 信息悬浮层（类似 Windows 聚焦） -->
       <div 
-        v-if="showInfo && !showCalendar"
+        v-if="showInfo && !showCalendar && image"
         ref="infoPanel"
         class="fixed w-[90%] max-w-md bg-black/40 backdrop-blur-lg rounded-xl p-4 z-20 select-none"
         :class="{ 
@@ -63,16 +63,16 @@
         ></div>
 
         <h2 class="text-lg font-bold text-white mb-2 mt-2">
-          {{ image.title || '未命名' }}
+          {{ image?.title || '未命名' }}
         </h2>
         
-        <p v-if="image.copyright" class="text-white/80 text-xs mb-3 leading-relaxed">
+        <p v-if="image?.copyright" class="text-white/80 text-xs mb-3 leading-relaxed">
           {{ image.copyright }}
         </p>
 
         <!-- 版权详情链接 -->
         <a 
-          v-if="image.copyrightlink"
+          v-if="image?.copyrightlink"
           :href="image.copyrightlink"
           target="_blank"
           class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-medium transition-all group"
