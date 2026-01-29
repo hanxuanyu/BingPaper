@@ -229,28 +229,65 @@ const panelPos = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
 
-// 初始化面板位置（移动端居中，桌面端右上角）
+// 计算图片实际显示区域（与ImageView保持一致）
+const getImageDisplayBounds = () => {
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+  
+  // 必应图片通常是16:9或类似宽高比
+  const imageAspectRatio = 16 / 9
+  const windowAspectRatio = windowWidth / windowHeight
+  
+  let displayWidth: number
+  let displayHeight: number
+  let offsetX: number
+  let offsetY: number
+  
+  if (windowAspectRatio > imageAspectRatio) {
+    // 窗口更宽，图片上下占满，左右留黑边
+    displayHeight = windowHeight
+    displayWidth = displayHeight * imageAspectRatio
+    offsetX = (windowWidth - displayWidth) / 2
+    offsetY = 0
+  } else {
+    // 窗口更高，图片左右占满，上下留黑边
+    displayWidth = windowWidth
+    displayHeight = displayWidth / imageAspectRatio
+    offsetX = 0
+    offsetY = (windowHeight - displayHeight) / 2
+  }
+  
+  return {
+    left: offsetX,
+    top: offsetY,
+    right: offsetX + displayWidth,
+    bottom: offsetY + displayHeight,
+    width: displayWidth,
+    height: displayHeight
+  }
+}
+
+// 初始化面板位置（移动端居中，桌面端右上角，限制在图片显示区域内）
 const initPanelPosition = () => {
   if (typeof window !== 'undefined') {
-    const windowWidth = window.innerWidth
-    const windowHeight = window.innerHeight
-    const isMobile = windowWidth < 640 // sm breakpoint
+    const bounds = getImageDisplayBounds()
+    const isMobile = window.innerWidth < 640 // sm breakpoint
     
     if (isMobile) {
-      // 移动端：居中显示
-      const panelWidth = windowWidth - 16 // 左右各8px边距
+      // 移动端：在图片区域内居中显示
+      const panelWidth = Math.min(bounds.width - 16, window.innerWidth - 16)
       const panelHeight = 580 // 估计高度
       panelPos.value = {
-        x: 8,
-        y: Math.max(8, (windowHeight - panelHeight) / 2)
+        x: Math.max(bounds.left, bounds.left + (bounds.width - panelWidth) / 2),
+        y: Math.max(bounds.top + 8, bounds.top + (bounds.height - panelHeight) / 2)
       }
     } else {
-      // 桌面端：右上角
-      const panelWidth = Math.min(420, windowWidth * 0.9)
+      // 桌面端：在图片区域右上角
+      const panelWidth = Math.min(420, bounds.width * 0.9)
       const panelHeight = 600
       panelPos.value = {
-        x: windowWidth - panelWidth - 40,
-        y: Math.min(80, (windowHeight - panelHeight) / 2)
+        x: bounds.right - panelWidth - 40,
+        y: Math.max(bounds.top + 80, bounds.top + (bounds.height - panelHeight) / 2)
       }
     }
   }
@@ -398,15 +435,19 @@ const onDrag = (e: MouseEvent | TouchEvent) => {
   const newX = clientX - dragStart.value.x
   const newY = clientY - dragStart.value.y
   
-  // 限制在视口内
+  // 限制在图片实际显示区域内
   if (calendarPanel.value) {
     const rect = calendarPanel.value.getBoundingClientRect()
-    const maxX = window.innerWidth - rect.width
-    const maxY = window.innerHeight - rect.height
+    const bounds = getImageDisplayBounds()
+    
+    const minX = bounds.left
+    const maxX = bounds.right - rect.width
+    const minY = bounds.top
+    const maxY = bounds.bottom - rect.height
     
     panelPos.value = {
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY))
+      x: Math.max(minX, Math.min(newX, maxX)),
+      y: Math.max(minY, Math.min(newY, maxY))
     }
   }
 }
