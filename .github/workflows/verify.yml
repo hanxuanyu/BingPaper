@@ -42,7 +42,7 @@ jobs:
       - name: Notification
         if: success()
         env:
-          NOTIFY_CURLS: ${{ secrets.NOTIFY_CURLS }}
+          NOTIFY_CURLS: ${{ vars.NOTIFY_CURLS }}
         run: |
           if [ -n "$NOTIFY_CURLS" ]; then
             printf "%s\n" "$NOTIFY_CURLS" | while read -r line; do
