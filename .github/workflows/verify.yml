@@ -38,3 +38,16 @@ jobs:
 
       - name: Test
         run: CGO_ENABLED=0 go test -v ./...
+
+      - name: Notification
+        if: success()
+        env:
+          NOTIFY_CURLS: ${{ secrets.NOTIFY_CURLS }}
+        run: |
+          if [ -n "$NOTIFY_CURLS" ]; then
+            printf "%s\n" "$NOTIFY_CURLS" | while read -r line; do
+              if [ -n "$line" ]; then
+                eval "$line" || true
+              fi
+            done
+          fi
