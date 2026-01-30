@@ -5,6 +5,9 @@ definitions:
       enableMktFallback:
         description: 当请求的地区不存在时，是否回退到默认地区
         type: boolean
+      enableOnDemandFetch:
+        description: 是否启用按需抓取
+        type: boolean
       mode:
         description: local | redirect
         type: string
@@ -543,6 +546,18 @@ paths:
           description: OK
           schema:
             type: file
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取指定日期图片
       tags:
       - image
@@ -566,6 +581,18 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.ImageMetaResp'
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取指定日期图片元数据
       tags:
       - image
@@ -594,6 +621,18 @@ paths:
           description: OK
           schema:
             type: file
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取随机图片
       tags:
       - image
@@ -612,6 +651,18 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.ImageMetaResp'
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取随机图片元数据
       tags:
       - image
@@ -641,6 +692,18 @@ paths:
           description: OK
           schema:
             type: file
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取今日图片
       tags:
       - image
@@ -659,6 +722,18 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handlers.ImageMetaResp'
+        "202":
+          description: 按需抓取任务已启动
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 图片未找到，响应体包含具体原因
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: 获取今日图片元数据
       tags:
       - image

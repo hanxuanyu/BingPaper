@@ -440,6 +440,24 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -474,6 +492,24 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -517,6 +553,24 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -544,6 +598,24 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -587,6 +659,24 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -614,6 +704,24 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -728,6 +836,10 @@ const docTemplate = `{
             "properties": {
                 "enableMktFallback": {
                     "description": "当请求的地区不存在时，是否回退到默认地区",
+                    "type": "boolean"
+                },
+                "enableOnDemandFetch": {
+                    "description": "是否启用按需抓取",
                     "type": "boolean"
                 },
                 "mode": {
