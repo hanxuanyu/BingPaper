@@ -58,7 +58,7 @@
         <!-- 拖动手柄 -->
         <div 
           @mousedown="startDrag"
-          @touchstart="startDrag"
+          @touchstart.passive="startDrag"
           class="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full cursor-move hover:bg-white/50 transition-colors touch-none"
         ></div>
 
@@ -178,10 +178,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useImageByDate } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
+import { getDefaultMkt } from '@/lib/mkt-utils'
 import Calendar from '@/components/ui/calendar/Calendar.vue'
 
 const route = useRoute()
@@ -202,11 +203,16 @@ const getInitialCalendarState = (): boolean => {
 }
 
 const currentDate = ref(route.params.date as string)
+const currentMkt = ref(route.query.mkt as string || getDefaultMkt())
 const showInfo = ref(true)
 const showCalendar = ref(getInitialCalendarState())
 const navigating = ref(false)
 const imageOpacity = ref(1)
 const imageTransitioning = ref(false)
+
+// 响应式窗口大小
+const windowSize = ref({ width: window.innerWidth, height: window.innerHeight })
+const isMobile = computed(() => windowSize.value.width < 768)
 
 // 前后日期可用性
 const hasPreviousDay = ref(true)
@@ -222,11 +228,10 @@ let animationFrameId: number | null = null
 
 // 计算图片实际显示区域（考虑图片宽高比和object-contain）
 const getImageDisplayBounds = () => {
-  const windowWidth = window.innerWidth
-  const windowHeight = window.innerHeight
+  const windowWidth = windowSize.value.width
+  const windowHeight = windowSize.value.height
   
-  // 必应图片通常是16:9或类似宽高比
-  // 使用UHD分辨率: 1920x1080 (16:9)
+  // 必应图片通常是16:9
   const imageAspectRatio = 16 / 9
   const windowAspectRatio = windowWidth / windowHeight
   
@@ -259,22 +264,35 @@ const getImageDisplayBounds = () => {
   }
 }
 
-// 初始化浮窗位置（居中偏下，限制在图片显示区域内）
+// 初始化浮窗位置（限制在图片显示区域内，移动端默认展示在底部）
 const initPanelPosition = () => {
   if (typeof window !== 'undefined') {
     const bounds = getImageDisplayBounds()
-    const panelWidth = Math.min(bounds.width * 0.9, 448) // max-w-md = 448px
     
-    infoPanelPos.value = {
-      x: bounds.left + (bounds.width - panelWidth) / 2,
-      y: Math.max(bounds.top, bounds.bottom - 280) // 距底部280px，避免与控制栏重叠
+    if (isMobile.value) {
+      // 移动端：默认居中靠下，不严格限制在图片内（因为要求可以不限制）
+      // 但为了好看，我们还是给它一个默认位置
+      const panelWidth = windowSize.value.width * 0.9
+      infoPanelPos.value = {
+        x: (windowSize.value.width - panelWidth) / 2,
+        y: windowSize.value.height - 240 // 靠下
+      }
+    } else {
+      // 桌面端：限制在图片区域内
+      const panelWidth = Math.min(bounds.width * 0.9, 448) // max-w-md = 448px
+      infoPanelPos.value = {
+        x: bounds.left + (bounds.width - panelWidth) / 2,
+        y: Math.max(bounds.top, bounds.bottom - 280) // 距底部280px，避免与控制栏重叠
+      }
     }
   }
 }
 
 // 开始拖动
 const startDrag = (e: MouseEvent | TouchEvent) => {
-  e.preventDefault()
+  if (e instanceof MouseEvent) {
+    e.preventDefault()
+  }
   isDragging.value = true
   
   const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
@@ -287,7 +305,7 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
   
   document.addEventListener('mousemove', onDrag, { passive: false })
   document.addEventListener('mouseup', stopDrag)
-  document.addEventListener('touchmove', onDrag, { passive: false })
+  document.addEventListener('touchmove', onDrag, { passive: true })
   document.addEventListener('touchend', stopDrag)
 }
 
@@ -295,7 +313,9 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
 const onDrag = (e: MouseEvent | TouchEvent) => {
   if (!isDragging.value) return
   
-  e.preventDefault()
+  if (e instanceof MouseEvent) {
+    e.preventDefault()
+  }
   
   // 取消之前的动画帧
   if (animationFrameId !== null) {
@@ -310,15 +330,26 @@ const onDrag = (e: MouseEvent | TouchEvent) => {
     const newX = clientX - dragStart.value.x
     const newY = clientY - dragStart.value.y
     
-    // 限制在图片实际显示区域内，考虑底部控制栏高度（约80px）
+    // 限制在有效区域内
     if (infoPanel.value) {
       const rect = infoPanel.value.getBoundingClientRect()
-      const bounds = getImageDisplayBounds()
       
-      const minX = bounds.left
-      const maxX = bounds.right - rect.width
-      const minY = bounds.top
-      const maxY = bounds.bottom - rect.height - 80 // 预留底部控制栏空间
+      let minX, maxX, minY, maxY
+      
+      if (isMobile.value) {
+        // 移动端：不限制区域，限制在视口内即可
+        minX = 0
+        maxX = windowSize.value.width - rect.width
+        minY = 0
+        maxY = windowSize.value.height - rect.height
+      } else {
+        // 桌面端：限制在图片实际显示区域内，考虑底部控制栏高度（约80px）
+        const bounds = getImageDisplayBounds()
+        minX = bounds.left
+        maxX = bounds.right - rect.width
+        minY = bounds.top
+        maxY = bounds.bottom - rect.height - 80 // 预留底部控制栏空间
+      }
       
       infoPanelPos.value = {
         x: Math.max(minX, Math.min(newX, maxX)),
@@ -347,12 +378,12 @@ const stopDrag = () => {
 }
 
 // 使用 composable 获取图片数据（传递 ref，自动响应日期变化）
-const { image, loading, error } = useImageByDate(currentDate)
+const { image, loading, error } = useImageByDate(currentDate, currentMkt)
 
 // 检测指定日期是否有数据
 const checkDateAvailability = async (dateStr: string): Promise<boolean> => {
   try {
-    await bingPaperApi.getImageMetaByDate(dateStr)
+    await bingPaperApi.getImageMetaByDate(dateStr, currentMkt.value)
     return true
   } catch (e) {
     return false
@@ -384,9 +415,6 @@ const checkAdjacentDates = async () => {
   checkingDates.value = false
 }
 
-// 初始化位置
-initPanelPosition()
-
 // 监听showCalendar变化并自动保存到localStorage
 watch(showCalendar, (newValue) => {
   try {
@@ -400,6 +428,20 @@ watch(showCalendar, (newValue) => {
 watch(currentDate, () => {
   checkAdjacentDates()
 }, { immediate: true })
+
+// 监听路由变化，支持前进后退
+watch(() => route.params.date, (newDate) => {
+  if (newDate && newDate !== currentDate.value) {
+    currentDate.value = newDate as string
+  }
+})
+
+watch(() => route.query.mkt, (newMkt) => {
+  const mkt = (newMkt as string) || getDefaultMkt()
+  if (mkt !== currentMkt.value) {
+    currentMkt.value = mkt
+  }
+})
 
 // 格式化日期
 const formatDate = (dateStr?: string) => {
@@ -415,7 +457,7 @@ const formatDate = (dateStr?: string) => {
 
 // 获取完整图片 URL
 const getFullImageUrl = () => {
-  return bingPaperApi.getImageUrlByDate(currentDate.value, 'UHD', 'jpg')
+  return bingPaperApi.getImageUrlByDate(currentDate.value, 'UHD', 'jpg', currentMkt.value)
 }
 
 // 预加载图片
@@ -432,10 +474,10 @@ const preloadImage = (url: string): Promise<void> => {
 const preloadImageAndData = async (date: string): Promise<void> => {
   try {
     // 并行预加载图片和数据
-    const imageUrl = bingPaperApi.getImageUrlByDate(date, 'UHD', 'jpg')
+    const imageUrl = bingPaperApi.getImageUrlByDate(date, 'UHD', 'jpg', currentMkt.value)
     await Promise.all([
       preloadImage(imageUrl),
-      bingPaperApi.getImageMetaByDate(date)
+      bingPaperApi.getImageMetaByDate(date, currentMkt.value)
     ])
   } catch (error) {
     console.warn('Failed to preload image or data:', error)
@@ -461,7 +503,7 @@ const switchToDate = async (newDate: string) => {
   
   // 3. 更新日期（此时图片和数据已经预加载完成）
   currentDate.value = newDate
-  router.replace(`/image/${newDate}`)
+  router.replace(`/image/${newDate}?mkt=${currentMkt.value}`)
   
   // 4. 等待一个微任务，确保 DOM 更新
   await new Promise(resolve => setTimeout(resolve, 50))
@@ -534,18 +576,29 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 }
 
-// 添加键盘事件监听
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', handleKeydown)
-  window.addEventListener('resize', initPanelPosition)
+// 窗口缩放处理
+const handleResize = () => {
+  windowSize.value = {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
+  initPanelPosition()
 }
 
-// 清理
-import { onUnmounted } from 'vue'
+// 生命周期钩子
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleKeydown)
+    window.addEventListener('resize', handleResize)
+  }
+  // 初始化浮窗位置
+  initPanelPosition()
+})
+
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', handleKeydown)
-    window.removeEventListener('resize', initPanelPosition)
+    window.removeEventListener('resize', handleResize)
     document.removeEventListener('mousemove', onDrag)
     document.removeEventListener('mouseup', stopDrag)
     document.removeEventListener('touchmove', onDrag)

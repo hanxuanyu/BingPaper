@@ -50,43 +50,97 @@ func CleanupOldImages(ctx context.Context) error {
 	return nil
 }
 
-func GetTodayImage() (*model.Image, error) {
+func GetTodayImage(mkt string) (*model.Image, error) {
 	today := time.Now().Format("2006-01-02")
 	var img model.Image
-	err := repo.DB.Where("date = ?", today).Preload("Variants").First(&img).Error
+	tx := repo.DB.Where("date = ?", today)
+	if mkt != "" {
+		tx = tx.Where("mkt = ?", mkt)
+	}
+	err := tx.Preload("Variants").First(&img).Error
 	if err != nil {
 		// 如果今天没有，尝试获取最近的一张
-		err = repo.DB.Order("date desc").Preload("Variants").First(&img).Error
+		tx = repo.DB.Order("date desc")
+		if mkt != "" {
+			tx = tx.Where("mkt = ?", mkt)
+		}
+		err = tx.Preload("Variants").First(&img).Error
 	}
+
+	// 兜底逻辑：如果指定地区没找到，且开启了兜底开关，则尝试获取默认地区的图片
+	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {
+		defaultMkt := config.GetConfig().GetDefaultMkt()
+		if mkt != defaultMkt {
+			return GetTodayImage(defaultMkt)
+		}
+		return GetTodayImage("")
+	}
+
 	return &img, err
 }
 
-func GetRandomImage() (*model.Image, error) {
+func GetRandomImage(mkt string) (*model.Image, error) {
 	var img model.Image
 	// SQLite 使用 RANDOM(), MySQL/Postgres 使用 RANDOM() 或 RAND()
 	// 简单起见，先查总数再 Offset
 	var count int64
-	repo.DB.Model(&model.Image{}).Count(&count)
+	tx := repo.DB.Model(&model.Image{})
+	if mkt != "" {
+		tx = tx.Where("mkt = ?", mkt)
+	}
+	tx.Count(&count)
 	if count == 0 {
 		return nil, fmt.Errorf("no images found")
 	}
 
 	// 这种方法不适合海量数据，但对于 30 天的数据没问题
-	err := repo.DB.Order("RANDOM()").Preload("Variants").First(&img).Error
+	tx = repo.DB.Order("RANDOM()")
+	if mkt != "" {
+		tx = tx.Where("mkt = ?", mkt)
+	}
+	err := tx.Preload("Variants").First(&img).Error
 	if err != nil {
 		// 适配 MySQL
-		err = repo.DB.Order("RAND()").Preload("Variants").First(&img).Error
+		tx = repo.DB.Order("RAND()")
+		if mkt != "" {
+			tx = tx.Where("mkt = ?", mkt)
+		}
+		err = tx.Preload("Variants").First(&img).Error
 	}
+
+	// 兜底逻辑
+	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {
+		defaultMkt := config.GetConfig().GetDefaultMkt()
+		if mkt != defaultMkt {
+			return GetRandomImage(defaultMkt)
+		}
+		return GetRandomImage("")
+	}
+
 	return &img, err
 }
 
-func GetImageByDate(date string) (*model.Image, error) {
+func GetImageByDate(date string, mkt string) (*model.Image, error) {
 	var img model.Image
-	err := repo.DB.Where("date = ?", date).Preload("Variants").First(&img).Error
+	tx := repo.DB.Where("date = ?", date)
+	if mkt != "" {
+		tx = tx.Where("mkt = ?", mkt)
+	}
+	err := tx.Preload("Variants").First(&img).Error
+
+	// 兜底逻辑
+	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {
+		defaultMkt := config.GetConfig().GetDefaultMkt()
+		if mkt != defaultMkt {
+			return GetImageByDate(date, defaultMkt)
+		}
+		return GetImageByDate(date, "")
+	}
+
 	return &img, err
 }
 
-func GetImageList(limit int, offset int, month string) ([]model.Image, error) {
+func GetImageList(limit int, offset int, month string, mkt string) ([]model.Image, error) {
 	var images []model.Image
 	tx := repo.DB.Model(&model.Image{})
 
@@ -95,6 +149,10 @@ func GetImageList(limit int, offset int, month string) ([]model.Image, error) {
 		// 这里简单处理：只要不为空就增加 LIKE 过滤
 		util.Logger.Debug("Filtering images by month", zap.String("month", month))
 		tx = tx.Where("date LIKE ?", month+"%")
+	}
+
+	if mkt != "" {
+		tx = tx.Where("mkt = ?", mkt)
 	}
 
 	tx = tx.Order("date desc").Preload("Variants")

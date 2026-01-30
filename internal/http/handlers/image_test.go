@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -64,5 +65,29 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 		assert.Equal(t, 1, len(variants))
 		assert.Contains(t, variants[0]["url"].(string), "myserver.com")
 		assert.Contains(t, variants[0]["url"].(string), "/api/v1/image/date/")
+	})
+}
+
+func TestGetRegions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("GetRegions should respect pinned order", func(t *testing.T) {
+		// Setup config with custom pinned regions
+		config.Init("")
+		config.GetConfig().Fetcher.Regions = []string{"en-US", "ja-JP"}
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		GetRegions(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var regions []map[string]string
+		err := json.Unmarshal(w.Body.Bytes(), &regions)
+		assert.NoError(t, err)
+
+		assert.GreaterOrEqual(t, len(regions), 2)
+		assert.Equal(t, "en-US", regions[0]["value"])
+		assert.Equal(t, "ja-JP", regions[1]["value"])
 	})
 }

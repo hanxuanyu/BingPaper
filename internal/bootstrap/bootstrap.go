@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"BingPaper/internal/config"
 	"BingPaper/internal/cron"
@@ -52,10 +53,11 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 
 	// 输出配置信息
 	util.Logger.Info("Application configuration loaded")
-	util.Logger.Info("├─ Config file", zap.String("path", config.GetRawViper().ConfigFileUsed()))
-	util.Logger.Info("├─ Database   ", zap.String("type", cfg.DB.Type))
-	util.Logger.Info("├─ Storage    ", zap.String("type", cfg.Storage.Type))
-	util.Logger.Info("└─ Server     ", zap.Int("port", cfg.Server.Port))
+	util.Logger.Info("├─ Config file ", zap.String("path", config.GetRawViper().ConfigFileUsed()))
+	util.Logger.Info("├─ Database    ", zap.String("type", cfg.DB.Type))
+	util.Logger.Info("├─ Storage     ", zap.String("type", cfg.Storage.Type))
+	util.Logger.Info("├─ Server      ", zap.Int("port", cfg.Server.Port))
+	util.Logger.Info("└─ Active Mkt  ", zap.Strings("regions", cfg.Fetcher.Regions))
 
 	// 根据存储类型输出更多信息
 	switch cfg.Storage.Type {
@@ -147,5 +149,6 @@ func LogWelcomeInfo() {
 	fmt.Printf("  - 管理后台:   %s/admin\n", baseURL)
 	fmt.Printf("  - API 文档:   %s/swagger/index.html\n", baseURL)
 	fmt.Printf("  - 今日图片:   %s/api/v1/image/today\n", baseURL)
+	fmt.Printf("  - 激活地区:   %s\n", strings.Join(cfg.Fetcher.Regions, ", "))
 	fmt.Println("---------------------------------------------------------")
 }

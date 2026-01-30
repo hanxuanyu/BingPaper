@@ -102,6 +102,16 @@
                 local: 直接返回图片流; redirect: 重定向到存储位置
               </p>
             </div>
+            <div class="flex items-center gap-2">
+              <Label for="api-fallback">启用地区不存在时兜底</Label>
+              <Switch
+                id="api-fallback"
+                v-model="config.API.EnableMktFallback"
+              />
+            </div>
+            <p class="text-xs text-gray-500">
+              如果请求的地区无数据，自动回退到默认地区
+            </p>
           </CardContent>
         </Card>
 
@@ -372,6 +382,31 @@
           </CardContent>
         </Card>
 
+        <!-- 抓取配置 -->
+        <Card>
+          <CardHeader>
+            <CardTitle>抓取配置</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="space-y-2">
+              <Label>抓取地区</Label>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                <div v-for="region in allRegions" :key="region.value" class="flex items-center space-x-2">
+                  <Checkbox 
+                    :id="'region-'+region.value" 
+                    :checked="config.Fetcher.Regions.includes(region.value)"
+                    @update:checked="(checked: any) => toggleRegion(region.value, !!checked)"
+                  />
+                  <Label :for="'region-'+region.value" class="text-sm font-normal cursor-pointer">{{ region.label }}</Label>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">
+                勾选需要定期抓取壁纸的地区。如果不勾选任何地区，默认将只抓取 zh-CN。
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <!-- 功能特性配置 -->
         <Card>
           <CardHeader>
@@ -414,6 +449,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { apiService } from '@/lib/api-service'
 import type { Config } from '@/lib/api-types'
@@ -424,9 +460,12 @@ const loadError = ref('')
 const saveLoading = ref(false)
 const dsnError = ref('')
 
+// 所有可选地区列表
+const allRegions = ref<any[]>([])
+
 const config = ref<Config>({
   Admin: { PasswordBcrypt: '' },
-  API: { Mode: 'local' },
+  API: { Mode: 'local', EnableMktFallback: true },
   Cron: { Enabled: true, DailySpec: '0 9 * * *' },
   DB: { Type: 'sqlite', DSN: '' },
   Feature: { WriteDailyFiles: true },
@@ -464,11 +503,36 @@ const config = ref<Config>({
     }
   },
   Token: { DefaultTTL: '168h' },
-  Web: { Path: './webapp/dist' }
+  Web: { Path: './webapp/dist' },
+  Fetcher: { Regions: [] }
 })
 
 const configJson = ref('')
 const jsonError = ref('')
+
+// 获取所有地区
+const fetchRegions = async () => {
+  try {
+    const data = await apiService.getRegions()
+    allRegions.value = data
+  } catch (err) {
+    console.error('获取地区列表失败:', err)
+  }
+}
+
+const toggleRegion = (regionValue: string, checked: boolean) => {
+  if (!config.value.Fetcher.Regions) {
+    config.value.Fetcher.Regions = []
+  }
+  
+  if (checked) {
+    if (!config.value.Fetcher.Regions.includes(regionValue)) {
+      config.value.Fetcher.Regions.push(regionValue)
+    }
+  } else {
+    config.value.Fetcher.Regions = config.value.Fetcher.Regions.filter(r => r !== regionValue)
+  }
+}
 
 // DSN 示例
 const dsnExamples = computed(() => {
@@ -602,6 +666,7 @@ const handleSaveConfig = async () => {
 }
 
 onMounted(() => {
+  fetchRegions()
   fetchConfig()
 })
 </script>

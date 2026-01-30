@@ -79,6 +79,23 @@
           
           <!-- 筛选器 -->
           <div class="flex flex-wrap items-center gap-3">
+            <!-- 地区选择 -->
+            <Select v-model="selectedMkt" @update:model-value="onMktChange">
+              <SelectTrigger class="w-[180px] bg-white/10 backdrop-blur-md text-white border-white/20 hover:bg-white/15 hover:border-white/30 focus:ring-white/50 shadow-lg">
+                <SelectValue placeholder="选择地区" />
+              </SelectTrigger>
+              <SelectContent class="bg-gray-900/95 backdrop-blur-xl border-white/20 text-white">
+                <SelectItem 
+                  v-for="region in regions" 
+                  :key="region.value" 
+                  :value="region.value"
+                  class="focus:bg-white/10 focus:text-white cursor-pointer"
+                >
+                  {{ region.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             <!-- 年份选择 -->
             <Select v-model="selectedYear" @update:model-value="onYearChange">
               <SelectTrigger class="w-[180px] bg-white/10 backdrop-blur-md text-white border-white/20 hover:bg-white/15 hover:border-white/30 focus:ring-white/50 shadow-lg">
@@ -153,7 +170,7 @@
             </div>
             <img 
               v-else
-              :src="getImageUrl(image.date!)" 
+              :src="getImageUrl(image)" 
               :alt="image.title || 'Bing Image'"
               class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
@@ -248,6 +265,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useImageList } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
 import { useRouter } from 'vue-router'
+import { getDefaultMkt, setSavedMkt, SUPPORTED_REGIONS, setSupportedRegions } from '@/lib/mkt-utils'
 import {
   Select,
   SelectContent,
@@ -258,18 +276,21 @@ import {
 
 const router = useRouter()
 
+// 地区列表
+const regions = ref(SUPPORTED_REGIONS)
+
 // 顶部最新图片（独立加载，不受筛选影响）
 const latestImage = ref<any>(null)
 const todayLoading = ref(false)
 
 // 历史图片列表（使用服务端分页和筛选，每页15张）
-const { images, loading, hasMore, loadMore, filterByMonth } = useImageList(15)
+const { images, loading, hasMore, loadMore, filterByMonth, filterByMkt } = useImageList(15)
 
 // 加载顶部最新图片
 const loadLatestImage = async () => {
   todayLoading.value = true
   try {
-    const params = { page: 1, page_size: 1 }
+    const params: any = { page: 1, page_size: 1, mkt: selectedMkt.value }
     const result = await bingPaperApi.getImages(params)
     if (result.length > 0) {
       latestImage.value = result[0]
@@ -281,8 +302,17 @@ const loadLatestImage = async () => {
   }
 }
 
-// 初始化加载顶部图片
-onMounted(() => {
+// 初始化加载
+onMounted(async () => {
+  try {
+    const backendRegions = await bingPaperApi.getRegions()
+    if (backendRegions && backendRegions.length > 0) {
+      regions.value = backendRegions
+      setSupportedRegions(backendRegions)
+    }
+  } catch (error) {
+    console.error('Failed to fetch regions:', error)
+  }
   loadLatestImage()
 })
 
@@ -315,8 +345,21 @@ const nextUpdateTime = computed(() => {
 })
 
 // 筛选相关状态
+const selectedMkt = ref(getDefaultMkt())
 const selectedYear = ref('')
 const selectedMonth = ref('')
+
+const onMktChange = () => {
+  setSavedMkt(selectedMkt.value)
+  filterByMkt(selectedMkt.value)
+  loadLatestImage()
+  
+  // 重置懒加载状态
+  imageVisibility.value = []
+  setTimeout(() => {
+    setupObserver()
+  }, 100)
+}
 
 // 懒加载相关
 const imageRefs = ref<(HTMLElement | null)[]>([])
@@ -374,11 +417,14 @@ const onFilterChange = () => {
 
 // 重置筛选
 const resetFilters = () => {
+  selectedMkt.value = getDefaultMkt()
   selectedYear.value = ''
   selectedMonth.value = ''
   
   // 重置为加载默认数据
+  filterByMkt(selectedMkt.value)
   filterByMonth(undefined)
+  loadLatestImage()
   
   // 重置懒加载状态
   imageVisibility.value = []
@@ -521,12 +567,12 @@ const formatDate = (dateStr?: string) => {
 // 获取最新图片 URL（顶部大图使用UHD高清）
 const getLatestImageUrl = () => {
   if (!latestImage.value?.date) return ''
-  return bingPaperApi.getImageUrlByDate(latestImage.value.date, 'UHD', 'jpg')
+  return bingPaperApi.getImageUrlByDate(latestImage.value.date, 'UHD', 'jpg', latestImage.value.mkt)
 }
 
 // 获取图片 URL（缩略图 - 使用较小分辨率节省流量）
-const getImageUrl = (date: string) => {
-  return bingPaperApi.getImageUrlByDate(date, '640x480', 'jpg')
+const getImageUrl = (image: any) => {
+  return bingPaperApi.getImageUrlByDate(image.date!, '640x480', 'jpg', image.mkt)
 }
 
 // 查看图片详情

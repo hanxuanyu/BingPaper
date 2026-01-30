@@ -16,6 +16,7 @@ log:
 
 api:
   mode: local # local | redirect
+  enable_mkt_fallback: true # 当请求的地区不存在时，是否回退到默认地区
 
 cron:
   enabled: true

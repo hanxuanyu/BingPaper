@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"BingPaper/internal/config"
@@ -27,6 +28,7 @@ type ImageVariantResp struct {
 
 type ImageMetaResp struct {
 	Date          string             `json:"date"`
+	Mkt           string             `json:"mkt"`
 	Title         string             `json:"title"`
 	Copyright     string             `json:"copyright"`
 	CopyrightLink string             `json:"copyrightlink"`
@@ -41,13 +43,15 @@ type ImageMetaResp struct {
 // @Summary 获取今日图片
 // @Description 根据参数返回今日必应图片流或重定向
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240)" default(UHD)
 // @Param format query string false "格式 (jpg)" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
 // @Router /image/today [get]
 func GetToday(c *gin.Context) {
-	img, err := image.GetTodayImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetTodayImage(mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -59,11 +63,13 @@ func GetToday(c *gin.Context) {
 // @Summary 获取今日图片元数据
 // @Description 获取今日必应图片的标题、版权等元数据
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Router /image/today/meta [get]
 func GetTodayMeta(c *gin.Context) {
-	img, err := image.GetTodayImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetTodayImage(mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -76,13 +82,15 @@ func GetTodayMeta(c *gin.Context) {
 // @Summary 获取随机图片
 // @Description 随机返回一张已抓取的图片流或重定向
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
 // @Router /image/random [get]
 func GetRandom(c *gin.Context) {
-	img, err := image.GetRandomImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetRandomImage(mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -94,11 +102,13 @@ func GetRandom(c *gin.Context) {
 // @Summary 获取随机图片元数据
 // @Description 随机获取一张已抓取图片的元数据
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Router /image/random/meta [get]
 func GetRandomMeta(c *gin.Context) {
-	img, err := image.GetRandomImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetRandomImage(mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -112,6 +122,7 @@ func GetRandomMeta(c *gin.Context) {
 // @Description 根据日期返回图片流或重定向 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
@@ -119,7 +130,8 @@ func GetRandomMeta(c *gin.Context) {
 // @Router /image/date/{date} [get]
 func GetByDate(c *gin.Context) {
 	date := c.Param("date")
-	img, err := image.GetImageByDate(date)
+	mkt := c.Query("mkt")
+	img, err := image.GetImageByDate(date, mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -132,12 +144,14 @@ func GetByDate(c *gin.Context) {
 // @Description 根据日期获取图片元数据 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Router /image/date/{date}/meta [get]
 func GetByDateMeta(c *gin.Context) {
 	date := c.Param("date")
-	img, err := image.GetImageByDate(date)
+	mkt := c.Query("mkt")
+	img, err := image.GetImageByDate(date, mkt)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -154,6 +168,7 @@ func GetByDateMeta(c *gin.Context) {
 // @Param page query int false "页码 (从1开始)"
 // @Param page_size query int false "每页数量"
 // @Param month query string false "按月份过滤 (格式: YYYY-MM)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {array} ImageMetaResp
 // @Router /images [get]
@@ -162,10 +177,12 @@ func ListImages(c *gin.Context) {
 	pageStr := c.Query("page")
 	pageSizeStr := c.Query("page_size")
 	month := c.Query("month")
+	mkt := c.Query("mkt")
 
 	// 记录请求参数，便于排查过滤失效问题
 	util.Logger.Debug("ListImages parameters",
 		zap.String("month", month),
+		zap.String("mkt", mkt),
 		zap.String("page", pageStr),
 		zap.String("page_size", pageSizeStr),
 		zap.String("limit", limitStr))
@@ -192,7 +209,7 @@ func ListImages(c *gin.Context) {
 		offset = 0
 	}
 
-	images, err := image.GetImageList(limit, offset, month)
+	images, err := image.GetImageList(limit, offset, month, mkt)
 	if err != nil {
 		util.Logger.Error("ListImages service call failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -291,7 +308,7 @@ func formatMeta(img *model.Image) gin.H {
 		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
 			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, v.Variant)
 		} else if cfg.API.Mode == "local" || url == "" {
-			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format)
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format, img.Mkt)
 		}
 		variants = append(variants, gin.H{
 			"variant":     v.Variant,
@@ -304,6 +321,7 @@ func formatMeta(img *model.Image) gin.H {
 
 	return gin.H{
 		"date":          img.Date,
+		"mkt":           img.Mkt,
 		"title":         img.Title,
 		"copyright":     img.Copyright,
 		"copyrightlink": img.CopyrightLink,
@@ -313,4 +331,47 @@ func formatMeta(img *model.Image) gin.H {
 		"hsh":           img.HSH,
 		"variants":      variants,
 	}
+}
+
+// GetRegions 获取支持的地区列表
+// @Summary 获取支持的地区列表
+// @Description 返回系统支持的所有必应地区编码及标签。如果配置中指定了抓取地区，这些地区将排在列表最前面（置顶）。
+// @Tags image
+// @Produce json
+// @Success 200 {array} util.Region
+// @Router /regions [get]
+func GetRegions(c *gin.Context) {
+	cfg := config.GetConfig()
+	pinned := cfg.Fetcher.Regions
+
+	// 创建副本以避免修改原始全局变量
+	all := make([]util.Region, len(util.AllRegions))
+	copy(all, util.AllRegions)
+
+	if len(pinned) > 0 {
+		// 创建一个 Map 用于快速查找置顶地区及其顺序
+		pinnedMap := make(map[string]int)
+		for i, v := range pinned {
+			pinnedMap[v] = i
+		}
+
+		// 对列表进行稳定排序，使置顶地区排在前面
+		sort.SliceStable(all, func(i, j int) bool {
+			idxI, okI := pinnedMap[all[i].Value]
+			idxJ, okJ := pinnedMap[all[j].Value]
+
+			if okI && okJ {
+				return idxI < idxJ
+			}
+			if okI {
+				return true
+			}
+			if okJ {
+				return false
+			}
+			return false // 保持非置顶地区的原有相对顺序
+		})
+	}
+
+	c.JSON(http.StatusOK, all)
 }

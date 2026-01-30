@@ -2,10 +2,10 @@
   <div class="fixed inset-0 z-40">
     <div 
       ref="calendarPanel"
-      class="fixed bg-gradient-to-br from-black/30 via-black/20 to-black/30 backdrop-blur-xl rounded-3xl p-3 sm:p-4 w-[calc(100%-1rem)] sm:w-full max-w-[95vw] sm:max-w-[420px] shadow-2xl border border-white/10 cursor-move select-none"
+      class="fixed bg-gradient-to-br from-black/30 via-black/20 to-black/30 backdrop-blur-xl rounded-3xl p-3 sm:p-4 w-[calc(100%-1rem)] sm:w-full max-w-[95vw] sm:max-w-[420px] shadow-2xl border border-white/10 cursor-move select-none touch-none"
       :style="{ left: panelPos.x + 'px', top: panelPos.y + 'px' }"
       @mousedown="startDrag"
-      @touchstart="startDrag"
+      @touchstart.passive="startDrag"
       @click.stop
     >
       <!-- 拖动手柄指示器 -->
@@ -28,7 +28,7 @@
             <!-- 年月选择器 -->
             <div class="flex items-center justify-center gap-1 sm:gap-1.5 mb-0.5">
               <!-- 年份选择 -->
-              <Select v-model="currentYearString" @update:modelValue="onYearChange">
+              <Select v-model="currentYearString">
                 <SelectTrigger 
                   class="w-[90px] sm:w-[105px] h-6 sm:h-7 bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md font-bold text-xs sm:text-sm px-1.5 sm:px-2"
                   @click.stop
@@ -49,7 +49,7 @@
               </Select>
               
               <!-- 月份选择 -->
-              <Select v-model="currentMonthString" @update:modelValue="onMonthChange">
+              <Select v-model="currentMonthString">
                 <SelectTrigger 
                   class="w-[65px] sm:w-[75px] h-6 sm:h-7 bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md font-bold text-xs sm:text-sm px-1.5 sm:px-2"
                   @click.stop
@@ -214,7 +214,8 @@ interface CalendarDay {
 }
 
 const props = defineProps<{
-  selectedDate: string // YYYY-MM-DD
+  selectedDate?: string,
+  mkt?: string
 }>()
 
 const emit = defineEmits<{
@@ -229,10 +230,14 @@ const panelPos = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
 
+// 响应式窗口大小
+const windowSize = ref({ width: window.innerWidth, height: window.innerHeight })
+const isMobile = computed(() => windowSize.value.width < 768)
+
 // 计算图片实际显示区域（与ImageView保持一致）
 const getImageDisplayBounds = () => {
-  const windowWidth = window.innerWidth
-  const windowHeight = window.innerHeight
+  const windowWidth = windowSize.value.width
+  const windowHeight = windowSize.value.height
   
   // 必应图片通常是16:9或类似宽高比
   const imageAspectRatio = 16 / 9
@@ -271,11 +276,10 @@ const getImageDisplayBounds = () => {
 const initPanelPosition = () => {
   if (typeof window !== 'undefined') {
     const bounds = getImageDisplayBounds()
-    const isMobile = window.innerWidth < 640 // sm breakpoint
     
-    if (isMobile) {
-      // 移动端：在图片区域内居中显示
-      const panelWidth = Math.min(bounds.width - 16, window.innerWidth - 16)
+    if (isMobile.value) {
+      // 移动端：居中显示，尽量在图片内，但不强求
+      const panelWidth = Math.min(bounds.width - 16, windowSize.value.width - 16)
       const panelHeight = 580 // 估计高度
       panelPos.value = {
         x: Math.max(bounds.left, bounds.left + (bounds.width - panelWidth) / 2),
@@ -315,20 +319,6 @@ const currentMonthString = computed({
     currentMonth.value = Number(val)
   }
 })
-
-// 年份改变处理
-const onYearChange = (value: any) => {
-  if (value !== null && value !== undefined) {
-    currentYear.value = Number(value)
-  }
-}
-
-// 月份改变处理
-const onMonthChange = (value: any) => {
-  if (value !== null && value !== undefined) {
-    currentMonth.value = Number(value)
-  }
-}
 
 // 生成年份选项（从2009年到当前年份+10年）
 const yearOptions = computed(() => {
@@ -379,8 +369,20 @@ const loadHolidaysForYear = async (year: number) => {
   }
 }
 
+// 窗口缩放处理
+const handleResize = () => {
+  windowSize.value = {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
+  initPanelPosition()
+}
+
 // 组件挂载时加载当前年份的假期数据
 onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleResize)
+  }
   const currentYearValue = currentYear.value
   loadHolidaysForYear(currentYearValue)
   // 预加载前后一年的数据
@@ -404,7 +406,9 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
     return
   }
   
-  e.preventDefault()
+  if (e instanceof MouseEvent) {
+    e.preventDefault()
+  }
   isDragging.value = true
   
   const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX
@@ -417,7 +421,7 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
   
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', stopDrag)
-  document.addEventListener('touchmove', onDrag, { passive: false })
+  document.addEventListener('touchmove', onDrag, { passive: true })
   document.addEventListener('touchend', stopDrag)
 }
 
@@ -425,7 +429,7 @@ const startDrag = (e: MouseEvent | TouchEvent) => {
 const onDrag = (e: MouseEvent | TouchEvent) => {
   if (!isDragging.value) return
   
-  if (e instanceof TouchEvent) {
+  if (e instanceof MouseEvent) {
     e.preventDefault()
   }
   
@@ -435,15 +439,26 @@ const onDrag = (e: MouseEvent | TouchEvent) => {
   const newX = clientX - dragStart.value.x
   const newY = clientY - dragStart.value.y
   
-  // 限制在图片实际显示区域内
+  // 限制在有效区域内
   if (calendarPanel.value) {
     const rect = calendarPanel.value.getBoundingClientRect()
-    const bounds = getImageDisplayBounds()
     
-    const minX = bounds.left
-    const maxX = bounds.right - rect.width
-    const minY = bounds.top
-    const maxY = bounds.bottom - rect.height
+    let minX, maxX, minY, maxY
+    
+    if (isMobile.value) {
+      // 移动端：不限制区域，限制在视口内即可
+      minX = 0
+      maxX = windowSize.value.width - rect.width
+      minY = 0
+      maxY = windowSize.value.height - rect.height
+    } else {
+      // 桌面端：限制在图片实际显示区域内
+      const bounds = getImageDisplayBounds()
+      minX = bounds.left
+      maxX = bounds.right - rect.width
+      minY = bounds.top
+      maxY = bounds.bottom - rect.height
+    }
     
     panelPos.value = {
       x: Math.max(minX, Math.min(newX, maxX)),
@@ -517,7 +532,7 @@ const createDayObject = (date: Date, isCurrentMonth: boolean): CalendarDay => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
-  const selectedDate = new Date(props.selectedDate)
+  const selectedDate = new Date(props.selectedDate || new Date())
   selectedDate.setHours(0, 0, 0, 0)
   
   // 转换为农历
@@ -626,6 +641,9 @@ const goToToday = () => {
 // 清理
 import { onUnmounted } from 'vue'
 onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleResize)
+  }
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
   document.removeEventListener('touchmove', onDrag)

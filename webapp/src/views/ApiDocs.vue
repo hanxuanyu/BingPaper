@@ -103,6 +103,10 @@
                   <code class="text-yellow-400 min-w-24">format</code>
                   <span class="text-white/50">格式: jpg (默认: jpg)</span>
                 </div>
+                <div class="flex gap-4 text-sm">
+                  <code class="text-yellow-400 min-w-24">mkt</code>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)，默认由服务器自动探测</span>
+                </div>
               </div>
             </div>
 
@@ -182,6 +186,10 @@
                   <code class="text-yellow-400 min-w-24">format</code>
                   <span class="text-white/50">格式 (默认: jpg)</span>
                 </div>
+                <div class="flex gap-4 text-sm">
+                  <code class="text-yellow-400 min-w-24">mkt</code>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)</span>
+                </div>
               </div>
             </div>
 
@@ -253,6 +261,10 @@
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">format</code>
                   <span class="text-white/50">格式 (默认: jpg)</span>
+                </div>
+                <div class="flex gap-4 text-sm">
+                  <code class="text-yellow-400 min-w-24">mkt</code>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)</span>
                 </div>
               </div>
             </div>
@@ -333,6 +345,10 @@
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">date</code>
                 <span class="text-white/60">图片日期（格式：YYYY-MM-DD）</span>
+              </div>
+              <div class="flex gap-4">
+                <code class="text-yellow-400 min-w-32">mkt</code>
+                <span class="text-white/60">地区编码（如 zh-CN, en-US）</span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">title</code>
@@ -458,24 +474,26 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { API_BASE_URL } from '@/lib/api-config'
+import { getDefaultMkt } from '@/lib/mkt-utils'
 
 const baseURL = ref(API_BASE_URL)
 const previewImage = ref<string | null>(null)
+const defaultMkt = getDefaultMkt()
 
 // 获取今日图片示例
 const getTodayImageExample = () => {
-  return `${baseURL.value}/image/today?variant=UHD&format=jpg`
+  return `${baseURL.value}/image/today?variant=UHD&format=jpg&mkt=${defaultMkt}`
 }
 
 // 获取指定日期图片示例
 const getDateImageExample = () => {
   const today = new Date().toISOString().split('T')[0]
-  return `${baseURL.value}/image/date/${today}?variant=1920x1080&format=jpg`
+  return `${baseURL.value}/image/date/${today}?variant=1920x1080&format=jpg&mkt=${defaultMkt}`
 }
 
 // 获取随机图片示例
 const getRandomImageExample = () => {
-  return `${baseURL.value}/image/random?variant=UHD&format=jpg`
+  return `${baseURL.value}/image/random?variant=UHD&format=jpg&mkt=${defaultMkt}`
 }
 
 // 复制到剪贴板

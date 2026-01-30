@@ -2,6 +2,9 @@ basePath: /api/v1
 definitions:
   config.APIConfig:
     properties:
+      enableMktFallback:
+        description: 当请求的地区不存在时，是否回退到默认地区
+        type: boolean
       mode:
         description: local | redirect
         type: string
@@ -23,6 +26,8 @@ definitions:
         $ref: '#/definitions/config.DBConfig'
       feature:
         $ref: '#/definitions/config.FeatureConfig'
+      fetcher:
+        $ref: '#/definitions/config.FetcherConfig'
       log:
         $ref: '#/definitions/config.LogConfig'
       retention:
@@ -55,6 +60,13 @@ definitions:
     properties:
       writeDailyFiles:
         type: boolean
+    type: object
+  config.FetcherConfig:
+    properties:
+      regions:
+        items:
+          type: string
+        type: array
     type: object
   config.LocalConfig:
     properties:
@@ -190,6 +202,8 @@ definitions:
         type: string
       hsh:
         type: string
+      mkt:
+        type: string
       quiz:
         type: string
       startdate:
@@ -246,6 +260,13 @@ definitions:
       token:
         type: string
       updated_at:
+        type: string
+    type: object
+  util.Region:
+    properties:
+      label:
+        type: string
+      value:
         type: string
     type: object
 host: localhost:8080
@@ -501,6 +522,10 @@ paths:
         name: date
         required: true
         type: string
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       - default: UHD
         description: 分辨率
         in: query
@@ -530,6 +555,10 @@ paths:
         name: date
         required: true
         type: string
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       produces:
       - application/json
       responses:
@@ -544,6 +573,10 @@ paths:
     get:
       description: 随机返回一张已抓取的图片流或重定向
       parameters:
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       - default: UHD
         description: 分辨率
         in: query
@@ -567,6 +600,11 @@ paths:
   /image/random/meta:
     get:
       description: 随机获取一张已抓取图片的元数据
+      parameters:
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       produces:
       - application/json
       responses:
@@ -581,6 +619,10 @@ paths:
     get:
       description: 根据参数返回今日必应图片流或重定向
       parameters:
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       - default: UHD
         description: 分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480,
           640x480, 640x360, 480x360, 400x240, 320x240)
@@ -605,6 +647,11 @@ paths:
   /image/today/meta:
     get:
       description: 获取今日必应图片的标题、版权等元数据
+      parameters:
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       produces:
       - application/json
       responses:
@@ -637,6 +684,10 @@ paths:
         in: query
         name: month
         type: string
+      - description: 地区编码 (如 zh-CN, en-US)
+        in: query
+        name: mkt
+        type: string
       produces:
       - application/json
       responses:
@@ -647,6 +698,21 @@ paths:
               $ref: '#/definitions/handlers.ImageMetaResp'
             type: array
       summary: 获取图片列表
+      tags:
+      - image
+  /regions:
+    get:
+      description: 返回系统支持的所有必应地区编码及标签。如果配置中指定了抓取地区，这些地区将排在列表最前面（置顶）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/util.Region'
+            type: array
+      summary: 获取支持的地区列表
       tags:
       - image
 securityDefinitions:

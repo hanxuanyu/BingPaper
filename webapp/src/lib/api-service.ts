@@ -7,6 +7,7 @@ import type {
   UpdateTokenRequest,
   ChangePasswordRequest,
   Config,
+  Region,
   ImageMeta,
   ImageListParams,
   ManualFetchRequest,
@@ -109,6 +110,7 @@ export class BingPaperApiService {
     if (params?.page) searchParams.set('page', params.page.toString())
     if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
     if (params?.month) searchParams.set('month', params.month)
+    if (params?.mkt) searchParams.set('mkt', params.mkt)
     
     const queryString = searchParams.toString()
     const endpoint = queryString ? `/images?${queryString}` : '/images'
@@ -117,47 +119,60 @@ export class BingPaperApiService {
   }
 
   /**
+   * 获取支持的地区列表
+   */
+  async getRegions(): Promise<Region[]> {
+    return apiClient.get<Region[]>('/regions')
+  }
+
+  /**
    * 获取今日图片元数据
    */
-  async getTodayImageMeta(): Promise<ImageMeta> {
-    return apiClient.get<ImageMeta>('/image/today/meta')
+  async getTodayImageMeta(mkt?: string): Promise<ImageMeta> {
+    const endpoint = mkt ? `/image/today/meta?mkt=${mkt}` : '/image/today/meta'
+    return apiClient.get<ImageMeta>(endpoint)
   }
 
   /**
    * 获取指定日期图片元数据
    */
-  async getImageMetaByDate(date: string): Promise<ImageMeta> {
-    return apiClient.get<ImageMeta>(`/image/date/${date}/meta`)
+  async getImageMetaByDate(date: string, mkt?: string): Promise<ImageMeta> {
+    const endpoint = mkt ? `/image/date/${date}/meta?mkt=${mkt}` : `/image/date/${date}/meta`
+    return apiClient.get<ImageMeta>(endpoint)
   }
 
   /**
    * 获取随机图片元数据
    */
-  async getRandomImageMeta(): Promise<ImageMeta> {
-    return apiClient.get<ImageMeta>('/image/random/meta')
+  async getRandomImageMeta(mkt?: string): Promise<ImageMeta> {
+    const endpoint = mkt ? `/image/random/meta?mkt=${mkt}` : '/image/random/meta'
+    return apiClient.get<ImageMeta>(endpoint)
   }
 
   /**
    * 构建图片 URL
    */
-  getTodayImageUrl(variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg'): string {
+  getTodayImageUrl(variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg', mkt?: string): string {
     const params = new URLSearchParams({ variant, format })
+    if (mkt) params.set('mkt', mkt)
     return `${apiConfig.baseURL}/image/today?${params.toString()}`
   }
 
   /**
    * 构建指定日期图片 URL
    */
-  getImageUrlByDate(date: string, variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg'): string {
+  getImageUrlByDate(date: string, variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg', mkt?: string): string {
     const params = new URLSearchParams({ variant, format })
+    if (mkt) params.set('mkt', mkt)
     return `${apiConfig.baseURL}/image/date/${date}?${params.toString()}`
   }
 
   /**
    * 构建随机图片 URL
    */
-  getRandomImageUrl(variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg'): string {
+  getRandomImageUrl(variant: ImageVariant = 'UHD', format: ImageFormat = 'jpg', mkt?: string): string {
     const params = new URLSearchParams({ variant, format })
+    if (mkt) params.set('mkt', mkt)
     return `${apiConfig.baseURL}/image/random?${params.toString()}`
   }
 
@@ -197,6 +212,7 @@ export const {
   manualFetch,
   manualCleanup,
   getImages,
+  getRegions,
   getTodayImageMeta,
   getImageMetaByDate,
   getRandomImageMeta,
