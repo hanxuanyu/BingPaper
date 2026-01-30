@@ -75,6 +75,7 @@ export interface AdminConfig {
 export interface APIConfig {
   Mode: string // 'local' | 'redirect'
   EnableMktFallback: boolean
+  EnableOnDemandFetch: boolean
 }
 
 export interface CronConfig {

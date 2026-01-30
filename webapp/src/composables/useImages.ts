@@ -38,6 +38,39 @@ export function useTodayImage(mkt?: string) {
 }
 
 /**
+ * 获取全球今日图片
+ */
+export function useGlobalTodayImages() {
+  const images = ref<ImageMeta[]>([])
+  const loading = ref(false)
+  const error = ref<Error | null>(null)
+
+  const fetchImages = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      images.value = await bingPaperApi.getGlobalTodayImages()
+    } catch (e) {
+      error.value = e as Error
+      console.error('Failed to fetch global today images:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  onMounted(() => {
+    fetchImages()
+  })
+
+  return {
+    images,
+    loading,
+    error,
+    refetch: fetchImages
+  }
+}
+
+/**
  * 获取图片列表（支持分页和月份筛选）
  */
 export function useImageList(pageSize = 30) {

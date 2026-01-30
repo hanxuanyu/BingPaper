@@ -675,6 +675,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/images/global/today": {
+            "get": {
+                "description": "获取配置文件中所有已开启地区的今日必应图片元数据（缩略图）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取所有地区的今日图片列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.ImageMetaResp"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/regions": {
             "get": {
                 "description": "返回系统支持的所有必应地区编码及标签。如果配置中指定了抓取地区，这些地区将排在列表最前面（置顶）。",

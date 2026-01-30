@@ -69,6 +69,81 @@
       </div>
     </section>
 
+    <!-- Global Section - 必应全球 -->
+    <section v-if="globalImages.length > 0" class="py-16 px-4 md:px-8 lg:px-16 bg-white/5 border-y border-white/5">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-8">
+          <div class="space-y-1">
+            <h2 class="text-3xl md:text-4xl font-bold text-white">
+              必应全球
+            </h2>
+          </div>
+        </div>
+
+        <div class="relative group">
+          <!-- 左右切换按钮 -->
+          <button 
+            @click="scrollGlobal('left')"
+            class="absolute left-[-20px] top-1/2 -translate-y-1/2 z-20 p-2 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/10 hover:bg-black/70"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <button 
+            @click="scrollGlobal('right')"
+            class="absolute right-[-20px] top-1/2 -translate-y-1/2 z-20 p-2 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/10 hover:bg-black/70"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
+          <div 
+            ref="globalScrollContainer"
+            class="flex overflow-x-auto gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x scroll-smooth"
+            @wheel="handleGlobalWheel"
+          >
+            <div 
+              v-for="image in globalImages" 
+              :key="image.mkt! + image.date!"
+              class="flex-none w-[280px] md:w-[350px] aspect-video rounded-xl overflow-hidden cursor-pointer transform transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl snap-start relative group/card"
+              @click="viewImage(image.date!, image.mkt!)"
+            >
+              <!-- 图片层 -->
+              <img 
+                :src="getImageUrl(image)" 
+                :alt="image.title"
+                class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-110"
+              />
+              
+              <!-- 渐变层 -->
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent group-hover/card:via-black/40 transition-colors duration-500"></div>
+              
+              <!-- 内容层 -->
+              <div class="absolute inset-0 flex flex-col justify-end p-5">
+                <div class="text-[10px] md:text-xs text-white/60 mb-1 transform translate-y-2 group-hover/card:translate-y-0 transition-transform duration-500">
+                  {{ formatDate(image.date) }}
+                </div>
+                <div class="flex items-center gap-2 mb-2 transform translate-y-2 group-hover/card:translate-y-0 transition-transform duration-500">
+                  <span class="text-xs text-white/70 font-medium">
+                    {{ getRegionLabel(image.mkt) }}
+                  </span>
+                </div>
+                
+                <h3 class="text-white font-bold text-base md:text-lg line-clamp-1 transform translate-y-1 group-hover/card:translate-y-0 transition-transform duration-500">
+                  {{ image.title || '必应每日一图' }}
+                </h3>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 左右渐变遮罩 (仅在大屏显示) -->
+          <div class="absolute right-0 top-0 bottom-6 w-24 bg-gradient-to-l from-gray-900 to-transparent pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Gallery Section - 历史图片 -->
     <section class="py-16 px-4 md:px-8 lg:px-16">
       <div class="max-w-7xl mx-auto">
@@ -262,7 +337,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useImageList } from '@/composables/useImages'
+import { useImageList, useGlobalTodayImages } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
 import { normalizeImageUrl } from '@/lib/api-config'
 import { useRouter } from 'vue-router'
@@ -284,8 +359,49 @@ const regions = ref(SUPPORTED_REGIONS)
 const latestImage = ref<any>(null)
 const todayLoading = ref(false)
 
+// 全球今日图片
+const { images: globalImages, loading: globalLoading } = useGlobalTodayImages()
+
+// 滚动功能实现
+const globalScrollContainer = ref<HTMLElement | null>(null)
+const scrollGlobal = (direction: 'left' | 'right') => {
+  if (!globalScrollContainer.value) return
+  // 增加翻页数量：滚动容器宽度的 80%，或者固定 3 张卡片的宽度
+  const scrollAmount = globalScrollContainer.value.clientWidth * 0.8 || 1000
+  globalScrollContainer.value.scrollBy({
+    left: direction === 'left' ? -scrollAmount : scrollAmount,
+    behavior: 'smooth'
+  })
+}
+
+// 鼠标滚轮横向滑动
+const handleGlobalWheel = (e: WheelEvent) => {
+  if (!globalScrollContainer.value) return
+  
+  const container = globalScrollContainer.value
+  const isAtStart = container.scrollLeft <= 0
+  const isAtEnd = Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth
+
+  // 当鼠标在滚动区域内，且是纵向滚动时
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    // 如果还没滚动到尽头，则拦截纵向滚动并转为横向
+    if ((e.deltaY > 0 && !isAtEnd) || (e.deltaY < 0 && !isAtStart)) {
+      e.preventDefault()
+      // 加大滚动步进以实现“快速翻页”
+      container.scrollLeft += e.deltaY * 1.5
+    }
+  }
+}
+
 // 历史图片列表（使用服务端分页和筛选，每页15张）
 const { images, loading, hasMore, loadMore, filterByMonth, filterByMkt } = useImageList(15)
+
+// 获取地区标签
+const getRegionLabel = (mkt?: string) => {
+  if (!mkt) return ''
+  const region = regions.value.find(r => r.value === mkt)
+  return region ? region.label : mkt
+}
 
 // 加载顶部最新图片
 const loadLatestImage = async () => {
@@ -580,8 +696,9 @@ const getImageUrl = (image: any) => {
 }
 
 // 查看图片详情
-const viewImage = (date: string) => {
-  router.push(`/image/${date}`)
+const viewImage = (date: string, mkt?: string) => {
+  const query = mkt ? `?mkt=${mkt}` : ''
+  router.push(`/image/${date}${query}`)
 }
 
 // 打开版权详情链接
@@ -620,5 +737,14 @@ html {
 
 html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
+}
+
+/* 隐藏横向滚动条 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 </style>

@@ -8,6 +8,7 @@ import (
 	"BingPaper/internal/config"
 	"BingPaper/internal/model"
 	"BingPaper/internal/repo"
+	"BingPaper/internal/service/fetcher"
 	"BingPaper/internal/storage"
 	"BingPaper/internal/util"
 
@@ -58,8 +59,19 @@ func GetTodayImage(mkt string) (*model.Image, error) {
 		tx = tx.Where("mkt = ?", mkt)
 	}
 	err := tx.Preload("Variants").First(&img).Error
+	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+		// 如果没找到，尝试按需抓取该地区
+		util.Logger.Info("Image not found in DB, attempting on-demand fetch", zap.String("mkt", mkt))
+		f := fetcher.NewFetcher()
+		_ = f.FetchRegion(context.Background(), mkt)
+
+		// 抓取后重新查询
+		tx = repo.DB.Where("date = ?", today).Where("mkt = ?", mkt)
+		err = tx.Preload("Variants").First(&img).Error
+	}
+
 	if err != nil {
-		// 如果今天没有，尝试获取最近的一张
+		// 如果今天还是没有，尝试获取最近的一张
 		tx = repo.DB.Order("date desc")
 		if mkt != "" {
 			tx = tx.Where("mkt = ?", mkt)
@@ -79,6 +91,22 @@ func GetTodayImage(mkt string) (*model.Image, error) {
 	return &img, err
 }
 
+func GetAllRegionsTodayImages() ([]model.Image, error) {
+	regions := config.GetConfig().Fetcher.Regions
+	if len(regions) == 0 {
+		regions = []string{config.GetConfig().GetDefaultMkt()}
+	}
+
+	var images []model.Image
+	for _, mkt := range regions {
+		img, err := GetTodayImage(mkt)
+		if err == nil {
+			images = append(images, *img)
+		}
+	}
+	return images, nil
+}
+
 func GetRandomImage(mkt string) (*model.Image, error) {
 	var img model.Image
 	// SQLite 使用 RANDOM(), MySQL/Postgres 使用 RANDOM() 或 RAND()
@@ -89,6 +117,17 @@ func GetRandomImage(mkt string) (*model.Image, error) {
 		tx = tx.Where("mkt = ?", mkt)
 	}
 	tx.Count(&count)
+	if count == 0 && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+		// 如果没找到，尝试按需抓取该地区
+		util.Logger.Info("No images found in DB for region, attempting on-demand fetch", zap.String("mkt", mkt))
+		f := fetcher.NewFetcher()
+		_ = f.FetchRegion(context.Background(), mkt)
+
+		// 抓取后重新计数
+		tx = repo.DB.Model(&model.Image{}).Where("mkt = ?", mkt)
+		tx.Count(&count)
+	}
+
 	if count == 0 {
 		return nil, fmt.Errorf("no images found")
 	}
@@ -127,6 +166,16 @@ func GetImageByDate(date string, mkt string) (*model.Image, error) {
 		tx = tx.Where("mkt = ?", mkt)
 	}
 	err := tx.Preload("Variants").First(&img).Error
+	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+		// 如果没找到，尝试按需抓取该地区
+		util.Logger.Info("Image not found in DB for date, attempting on-demand fetch", zap.String("mkt", mkt), zap.String("date", date))
+		f := fetcher.NewFetcher()
+		_ = f.FetchRegion(context.Background(), mkt)
+
+		// 抓取后重新查询
+		tx = repo.DB.Where("date = ?", date).Where("mkt = ?", mkt)
+		err = tx.Preload("Variants").First(&img).Error
+	}
 
 	// 兜底逻辑
 	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {

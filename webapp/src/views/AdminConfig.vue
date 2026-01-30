@@ -102,16 +102,33 @@
                 local: 直接返回图片流; redirect: 重定向到存储位置
               </p>
             </div>
-            <div class="flex items-center gap-2">
-              <Label for="api-fallback">启用地区不存在时兜底</Label>
-              <Switch
-                id="api-fallback"
-                v-model="config.API.EnableMktFallback"
-              />
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <Label for="api-fallback">启用地区不存在时兜底</Label>
+                  <p class="text-xs text-gray-500">
+                    如果请求的地区无数据，自动回退到默认地区
+                  </p>
+                </div>
+                <Switch
+                  id="api-fallback"
+                  v-model="config.API.EnableMktFallback"
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <Label for="api-on-demand">启用按需实时抓取</Label>
+                  <p class="text-xs text-gray-500">
+                    如果请求的地区无数据，尝试实时从 Bing 抓取
+                  </p>
+                </div>
+                <Switch
+                  id="api-on-demand"
+                  v-model="config.API.EnableOnDemandFetch"
+                />
+              </div>
             </div>
-            <p class="text-xs text-gray-500">
-              如果请求的地区无数据，自动回退到默认地区
-            </p>
           </CardContent>
         </Card>
 

@@ -60,8 +60,9 @@ func (c LogConfig) GetShowDBLog() bool    { return c.ShowDBLog }
 func (c LogConfig) GetDBLogLevel() string { return c.DBLogLevel }
 
 type APIConfig struct {
-	Mode              string `mapstructure:"mode" yaml:"mode"`                               // local | redirect
-	EnableMktFallback bool   `mapstructure:"enable_mkt_fallback" yaml:"enable_mkt_fallback"` // 当请求的地区不存在时，是否回退到默认地区
+	Mode                string `mapstructure:"mode" yaml:"mode"`                                     // local | redirect
+	EnableMktFallback   bool   `mapstructure:"enable_mkt_fallback" yaml:"enable_mkt_fallback"`       // 当请求的地区不存在时，是否回退到默认地区
+	EnableOnDemandFetch bool   `mapstructure:"enable_on_demand_fetch" yaml:"enable_on_demand_fetch"` // 是否启用按需抓取
 }
 
 type CronConfig struct {
@@ -165,7 +166,8 @@ func Init(configPath string) error {
 	v.SetDefault("log.show_db_log", false)
 	v.SetDefault("log.db_log_level", "info")
 	v.SetDefault("api.mode", "redirect")
-	v.SetDefault("api.enable_mkt_fallback", true)
+	v.SetDefault("api.enable_mkt_fallback", false)
+	v.SetDefault("api.enable_on_demand_fetch", false)
 	v.SetDefault("cron.enabled", true)
 	v.SetDefault("cron.daily_spec", "20 8-23/4 * * *")
 	v.SetDefault("retention.days", 0)

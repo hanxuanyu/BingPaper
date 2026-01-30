@@ -61,19 +61,33 @@ func (f *Fetcher) Fetch(ctx context.Context, n int) error {
 	}
 
 	for _, mkt := range regions {
-		util.Logger.Info("Fetching images for region", zap.String("mkt", mkt))
-		// 调用两次 API 获取最多两周的数据
-		// 第一次 idx=0&n=8 (今天起往回数 8 张)
-		if err := f.fetchByMkt(ctx, mkt, 0, 8); err != nil {
-			util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 0), zap.Error(err))
-		}
-		// 第二次 idx=7&n=8 (7天前起往回数 8 张，与第一次有重叠，确保不漏)
-		if err := f.fetchByMkt(ctx, mkt, 7, 8); err != nil {
-			util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 7), zap.Error(err))
+		if err := f.FetchRegion(ctx, mkt); err != nil {
+			util.Logger.Error("Failed to fetch region images", zap.String("mkt", mkt), zap.Error(err))
 		}
 	}
 
 	util.Logger.Info("Fetch task completed")
+	return nil
+}
+
+// FetchRegion 抓取指定地区的图片
+func (f *Fetcher) FetchRegion(ctx context.Context, mkt string) error {
+	if !util.IsValidRegion(mkt) {
+		util.Logger.Warn("Skipping fetch for invalid region", zap.String("mkt", mkt))
+		return fmt.Errorf("invalid region code: %s", mkt)
+	}
+	util.Logger.Info("Fetching images for region", zap.String("mkt", mkt))
+	// 调用两次 API 获取最多两周的数据
+	// 第一次 idx=0&n=8 (今天起往回数 8 张)
+	if err := f.fetchByMkt(ctx, mkt, 0, 8); err != nil {
+		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 0), zap.Error(err))
+		return err
+	}
+	// 第二次 idx=7&n=8 (7天前起往回数 8 张，与第一次有重叠，确保不漏)
+	if err := f.fetchByMkt(ctx, mkt, 7, 8); err != nil {
+		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 7), zap.Error(err))
+		// 第二次失败不一定返回错误，因为可能第一次已经拿到了
+	}
 	return nil
 }
 

@@ -119,6 +119,13 @@ export class BingPaperApiService {
   }
 
   /**
+   * 获取所有地区的今日图片列表
+   */
+  async getGlobalTodayImages(): Promise<ImageMeta[]> {
+    return apiClient.get<ImageMeta[]>('/images/global/today')
+  }
+
+  /**
    * 获取支持的地区列表
    */
   async getRegions(): Promise<Region[]> {
@@ -212,6 +219,7 @@ export const {
   manualFetch,
   manualCleanup,
   getImages,
+  getGlobalTodayImages,
   getRegions,
   getTodayImageMeta,
   getImageMetaByDate,
