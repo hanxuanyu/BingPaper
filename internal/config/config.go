@@ -330,8 +330,8 @@ func GetTokenTTL() time.Duration {
 	return ttl
 }
 
-// GetDefaultMkt 返回生效的默认地区编码
-func (c *Config) GetDefaultMkt() string {
+// GetDefaultRegion 返回生效的默认地区编码
+func (c *Config) GetDefaultRegion() string {
 	if len(c.Fetcher.Regions) > 0 {
 		return c.Fetcher.Regions[0]
 	}

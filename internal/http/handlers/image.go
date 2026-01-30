@@ -53,7 +53,7 @@ type ImageMetaResp struct {
 // @Router /image/today [get]
 func GetToday(c *gin.Context) {
 	mkt := c.Query("mkt")
-	img, err := image.GetTodayImage(mkt)
+	imgRegion, err := image.GetTodayImage(mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -62,7 +62,7 @@ func GetToday(c *gin.Context) {
 		sendImageNotFound(c, mkt)
 		return
 	}
-	handleImageResponse(c, img, 7200) // 2小时
+	handleImageResponse(c, imgRegion, 7200) // 2小时
 }
 
 // GetTodayMeta 获取今日图片元数据
@@ -77,7 +77,7 @@ func GetToday(c *gin.Context) {
 // @Router /image/today/meta [get]
 func GetTodayMeta(c *gin.Context) {
 	mkt := c.Query("mkt")
-	img, err := image.GetTodayImage(mkt)
+	imgRegion, err := image.GetTodayImage(mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -87,7 +87,7 @@ func GetTodayMeta(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "public, max-age=7200") // 2小时
-	c.JSON(http.StatusOK, formatMeta(img))
+	c.JSON(http.StatusOK, formatMeta(imgRegion))
 }
 
 // GetRandom 获取随机图片
@@ -102,9 +102,10 @@ func GetTodayMeta(c *gin.Context) {
 // @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/random [get]
+// GetRandom 获取随机图片
 func GetRandom(c *gin.Context) {
 	mkt := c.Query("mkt")
-	img, err := image.GetRandomImage(mkt)
+	imgRegion, err := image.GetRandomImage(mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -113,7 +114,7 @@ func GetRandom(c *gin.Context) {
 		sendImageNotFound(c, mkt)
 		return
 	}
-	handleImageResponse(c, img, 0) // 禁用缓存
+	handleImageResponse(c, imgRegion, 0) // 禁用缓存
 }
 
 // GetRandomMeta 获取随机图片元数据
@@ -128,7 +129,7 @@ func GetRandom(c *gin.Context) {
 // @Router /image/random/meta [get]
 func GetRandomMeta(c *gin.Context) {
 	mkt := c.Query("mkt")
-	img, err := image.GetRandomImage(mkt)
+	imgRegion, err := image.GetRandomImage(mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -138,7 +139,7 @@ func GetRandomMeta(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-	c.JSON(http.StatusOK, formatMeta(img))
+	c.JSON(http.StatusOK, formatMeta(imgRegion))
 }
 
 // GetByDate 获取指定日期图片
@@ -157,7 +158,7 @@ func GetRandomMeta(c *gin.Context) {
 func GetByDate(c *gin.Context) {
 	date := c.Param("date")
 	mkt := c.Query("mkt")
-	img, err := image.GetImageByDate(date, mkt)
+	imgRegion, err := image.GetImageByDate(date, mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -166,7 +167,7 @@ func GetByDate(c *gin.Context) {
 		sendImageNotFound(c, mkt)
 		return
 	}
-	handleImageResponse(c, img, 604800) // 7天
+	handleImageResponse(c, imgRegion, 604800) // 7天
 }
 
 // GetByDateMeta 获取指定日期图片元数据
@@ -183,7 +184,7 @@ func GetByDate(c *gin.Context) {
 func GetByDateMeta(c *gin.Context) {
 	date := c.Param("date")
 	mkt := c.Query("mkt")
-	img, err := image.GetImageByDate(date, mkt)
+	imgRegion, err := image.GetImageByDate(date, mkt)
 	if err == image.ErrFetchStarted {
 		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
 		return
@@ -193,7 +194,7 @@ func GetByDateMeta(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "public, max-age=604800") // 7天
-	c.JSON(http.StatusOK, formatMeta(img))
+	c.JSON(http.StatusOK, formatMeta(imgRegion))
 }
 
 // ListImages 获取图片列表
@@ -308,21 +309,21 @@ func sendImageNotFound(c *gin.Context, mkt string) {
 	c.JSON(http.StatusNotFound, gin.H{"error": message})
 }
 
-func handleImageResponse(c *gin.Context, img *model.Image, maxAge int) {
+func handleImageResponse(c *gin.Context, m *model.ImageRegion, maxAge int) {
 	variant := c.DefaultQuery("variant", "UHD")
 	format := c.DefaultQuery("format", "jpg")
 
 	var selected *model.ImageVariant
-	for _, v := range img.Variants {
+	for _, v := range m.Variants {
 		if v.Variant == variant && v.Format == format {
 			selected = &v
 			break
 		}
 	}
 
-	if selected == nil && len(img.Variants) > 0 {
+	if selected == nil && len(m.Variants) > 0 {
 		// 回退逻辑
-		selected = &img.Variants[0]
+		selected = &m.Variants[0]
 	}
 
 	if selected == nil {
@@ -339,9 +340,9 @@ func handleImageResponse(c *gin.Context, img *model.Image, maxAge int) {
 				c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 			}
 			c.Redirect(http.StatusFound, selected.PublicURL)
-		} else if img.URLBase != "" {
+		} else if m.URLBase != "" {
 			// 兜底重定向到原始 Bing
-			bingURL := fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, selected.Variant)
+			bingURL := fmt.Sprintf("https://www.bing.com%s_%s.jpg", m.URLBase, selected.Variant)
 			if maxAge > 0 {
 				c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
 			} else {
@@ -349,10 +350,10 @@ func handleImageResponse(c *gin.Context, img *model.Image, maxAge int) {
 			}
 			c.Redirect(http.StatusFound, bingURL)
 		} else {
-			serveLocal(c, selected.StorageKey, img.Date, maxAge)
+			serveLocal(c, selected.StorageKey, m.Date, maxAge)
 		}
 	} else {
-		serveLocal(c, selected.StorageKey, img.Date, maxAge)
+		serveLocal(c, selected.StorageKey, m.Date, maxAge)
 	}
 }
 
@@ -385,25 +386,36 @@ func serveLocal(c *gin.Context, key string, etag string, maxAge int) {
 	io.Copy(c.Writer, reader)
 }
 
-func formatMetaSummary(img *model.Image) gin.H {
+func formatMetaSummary(m *model.ImageRegion) gin.H {
 	cfg := config.GetConfig()
 
-	// 找到最小的变体（Size 最小）
+	// 找到最小的变体
 	var smallest *model.ImageVariant
-	for i := range img.Variants {
-		v := &img.Variants[i]
-		if smallest == nil || v.Size < smallest.Size {
+	for i := range m.Variants {
+		v := &m.Variants[i]
+		if smallest == nil {
 			smallest = v
+			continue
+		}
+
+		// 如果当前变体 Size 更小且不为 0，或者 smallest 的 Size 为 0
+		if v.Size > 0 && (smallest.Size == 0 || v.Size < smallest.Size) {
+			smallest = v
+		} else if v.Size == smallest.Size {
+			// 如果 Size 相同（包括都为 0），根据分辨率名称判断
+			if compareResolution(v.Variant, smallest.Variant) < 0 {
+				smallest = v
+			}
 		}
 	}
 
 	variants := []gin.H{}
 	if smallest != nil {
 		url := smallest.PublicURL
-		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
-			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, smallest.Variant)
+		if url == "" && cfg.API.Mode == "redirect" && m.URLBase != "" {
+			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", m.URLBase, smallest.Variant)
 		} else if cfg.API.Mode == "local" || url == "" {
-			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, smallest.Variant, smallest.Format, img.Mkt)
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, m.Date, smallest.Variant, smallest.Format, m.Mkt)
 		}
 		variants = append(variants, gin.H{
 			"variant":     smallest.Variant,
@@ -415,28 +427,28 @@ func formatMetaSummary(img *model.Image) gin.H {
 	}
 
 	return gin.H{
-		"date":          img.Date,
-		"mkt":           img.Mkt,
-		"title":         img.Title,
-		"copyright":     img.Copyright,
-		"copyrightlink": img.CopyrightLink,
-		"quiz":          img.Quiz,
-		"startdate":     img.StartDate,
-		"fullstartdate": img.FullStartDate,
-		"hsh":           img.HSH,
+		"date":          m.Date,
+		"mkt":           m.Mkt,
+		"title":         m.Title,
+		"copyright":     m.Copyright,
+		"copyrightlink": m.CopyrightLink,
+		"quiz":          m.Quiz,
+		"startdate":     m.StartDate,
+		"fullstartdate": m.FullStartDate,
+		"hsh":           m.HSH,
 		"variants":      variants,
 	}
 }
 
-func formatMeta(img *model.Image) gin.H {
+func formatMeta(m *model.ImageRegion) gin.H {
 	cfg := config.GetConfig()
 	variants := []gin.H{}
-	for _, v := range img.Variants {
+	for _, v := range m.Variants {
 		url := v.PublicURL
-		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
-			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, v.Variant)
+		if url == "" && cfg.API.Mode == "redirect" && m.URLBase != "" {
+			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", m.URLBase, v.Variant)
 		} else if cfg.API.Mode == "local" || url == "" {
-			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format, img.Mkt)
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, m.Date, v.Variant, v.Format, m.Mkt)
 		}
 		variants = append(variants, gin.H{
 			"variant":     v.Variant,
@@ -448,15 +460,15 @@ func formatMeta(img *model.Image) gin.H {
 	}
 
 	return gin.H{
-		"date":          img.Date,
-		"mkt":           img.Mkt,
-		"title":         img.Title,
-		"copyright":     img.Copyright,
-		"copyrightlink": img.CopyrightLink,
-		"quiz":          img.Quiz,
-		"startdate":     img.StartDate,
-		"fullstartdate": img.FullStartDate,
-		"hsh":           img.HSH,
+		"date":          m.Date,
+		"mkt":           m.Mkt,
+		"title":         m.Title,
+		"copyright":     m.Copyright,
+		"copyrightlink": m.CopyrightLink,
+		"quiz":          m.Quiz,
+		"startdate":     m.StartDate,
+		"fullstartdate": m.FullStartDate,
+		"hsh":           m.HSH,
 		"variants":      variants,
 	}
 }
@@ -519,4 +531,38 @@ func GetRegions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+// compareResolution 比较两个分辨率变体的大小。
+// 返回 < 0 表示 v1 < v2，返回 > 0 表示 v1 > v2，返回 0 表示相等。
+func compareResolution(v1, v2 string) int {
+	resOrder := map[string]int{
+		"320x240":   1,
+		"400x240":   2,
+		"480x360":   3,
+		"640x360":   4,
+		"640x480":   5,
+		"800x480":   6,
+		"800x600":   7,
+		"1024x768":  8,
+		"1280x720":  9,
+		"1366x768":  10,
+		"1920x1080": 11,
+		"UHD":       12,
+	}
+
+	o1, ok1 := resOrder[v1]
+	o2, ok2 := resOrder[v2]
+
+	if !ok1 && !ok2 {
+		return strings.Compare(v1, v2)
+	}
+	if !ok1 {
+		return 1 // 未知的分辨率认为比已知的大
+	}
+	if !ok2 {
+		return -1
+	}
+
+	return o1 - o2
 }

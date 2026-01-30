@@ -58,7 +58,7 @@ func (f *Fetcher) Fetch(ctx context.Context, n int) error {
 	util.Logger.Info("Starting fetch task", zap.Int("n", n))
 	regions := config.GetConfig().Fetcher.Regions
 	if len(regions) == 0 {
-		regions = []string{config.GetConfig().GetDefaultMkt()}
+		regions = []string{config.GetConfig().GetDefaultRegion()}
 	}
 
 	for _, mkt := range regions {
@@ -122,51 +122,17 @@ func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) er
 func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt string) error {
 	dateStr := fmt.Sprintf("%s-%s-%s", bingImg.Enddate[0:4], bingImg.Enddate[4:6], bingImg.Enddate[6:8])
 
-	// 幂等检查
-	var existing model.Image
-	if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existing).Error; err == nil {
-		util.Logger.Debug("Image already exists in DB, skipping", zap.String("date", dateStr), zap.String("mkt", mkt))
+	// 1. 地区关联幂等检查
+	var existingRegion model.ImageRegion
+	if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existingRegion).Error; err == nil {
+		util.Logger.Debug("ImageRegion record already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt))
 		return nil
 	}
 
 	imageName := f.extractImageName(bingImg.URLBase, bingImg.HSH)
-	util.Logger.Info("Processing image", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("imageName", imageName))
 
-	// 创建 DB 记录
-	dbImg := model.Image{
-		Date:          dateStr,
-		Mkt:           mkt,
-		Title:         bingImg.Title,
-		Copyright:     bingImg.Copyright,
-		CopyrightLink: bingImg.CopyrightLink,
-		URLBase:       bingImg.URLBase,
-		Quiz:          bingImg.Quiz,
-		StartDate:     bingImg.Startdate,
-		FullStartDate: bingImg.Fullstartdate,
-		HSH:           bingImg.HSH,
-	}
-
-	if err := repo.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "date"}, {Name: "mkt"}},
-		DoNothing: true,
-	}).Create(&dbImg).Error; err != nil {
-		util.Logger.Error("Failed to create image record", zap.Error(err))
-		return err
-	}
-
-	if dbImg.ID == 0 {
-		var existing model.Image
-		if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existing).Error; err != nil {
-			util.Logger.Error("Failed to query existing image record after conflict", zap.Error(err))
-			return err
-		}
-		dbImg = existing
-	}
-
-	// UHD 探测
+	// 2. 处理变体
 	imgURL, variantName := f.probeUHD(bingImg.URLBase)
-
-	// 保存各种分辨率
 	targetVariants := []struct {
 		name   string
 		width  int
@@ -185,54 +151,34 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		{"320x240", 320, 240},
 	}
 
-	// 检查是否所有变体都已存在于存储中
-	allExist := true
-	// 检查 UHD/原图
-	uhdKey := f.generateKey(imageName, variantName, "jpg")
-	exists, _ := storage.GlobalStorage.Exists(ctx, uhdKey)
-	if !exists {
-		allExist = false
-	} else {
-		for _, v := range targetVariants {
-			if v.name == variantName {
-				continue
-			}
-			vKey := f.generateKey(imageName, v.name, "jpg")
-			exists, _ := storage.GlobalStorage.Exists(ctx, vKey)
-			if !exists {
-				allExist = false
-				break
-			}
-		}
-	}
+	// 检查变体是否已存在 (通过 ImageName)
+	var existingVariants []model.ImageVariant
+	repo.DB.Where("image_name = ?", imageName).Find(&existingVariants)
 
-	if allExist {
-		util.Logger.Debug("All image variants exist in storage, linking only", zap.String("imageName", imageName))
-		// 只建立关联信息
-		f.saveVariant(ctx, &dbImg, imageName, variantName, "jpg", nil)
-		for _, v := range targetVariants {
-			if v.name == variantName {
-				continue
-			}
-			f.saveVariant(ctx, &dbImg, imageName, v.name, "jpg", nil)
-		}
+	allVariantsExist := len(existingVariants) > 0
+
+	var srcImg image.Image
+	var imgData []byte
+
+	if allVariantsExist {
+		util.Logger.Debug("Image variants already exist for name, linking only", zap.String("imageName", imageName))
 	} else {
-		// 需要下载并处理
-		util.Logger.Debug("Downloading and processing image", zap.String("url", imgURL))
-		imgData, err := f.downloadImage(imgURL)
+		util.Logger.Debug("Downloading and processing image", zap.String("url", imgURL), zap.String("imageName", imageName))
+		var err error
+		imgData, err = f.downloadImage(imgURL)
 		if err != nil {
 			util.Logger.Error("Failed to download image", zap.String("url", imgURL), zap.Error(err))
 			return err
 		}
 
-		srcImg, _, err := image.Decode(bytes.NewReader(imgData))
+		srcImg, _, err = image.Decode(bytes.NewReader(imgData))
 		if err != nil {
 			util.Logger.Error("Failed to decode image data", zap.Error(err))
 			return err
 		}
 
-		// 保存原图
-		if err := f.saveVariant(ctx, &dbImg, imageName, variantName, "jpg", imgData); err != nil {
+		// 保存原图变体
+		if err := f.saveVariant(ctx, imageName, variantName, "jpg", imgData); err != nil {
 			util.Logger.Error("Failed to save original variant", zap.String("variant", variantName), zap.Error(err))
 		}
 
@@ -247,14 +193,39 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 				continue
 			}
 			currentImgData := buf.Bytes()
-			if err := f.saveVariant(ctx, &dbImg, imageName, v.name, "jpg", currentImgData); err != nil {
+			if err := f.saveVariant(ctx, imageName, v.name, "jpg", currentImgData); err != nil {
 				util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
 			}
 		}
+	}
 
-		// 保存今日额外文件
-		today := time.Now().Format("2006-01-02")
-		if dateStr == today && config.GetConfig().Feature.WriteDailyFiles {
+	// 3. 创建 ImageRegion 记录
+	regionRecord := model.ImageRegion{
+		HSH:           bingImg.HSH,
+		URLBase:       bingImg.URLBase,
+		ImageName:     imageName,
+		Date:          dateStr,
+		Mkt:           mkt,
+		Title:         bingImg.Title,
+		Copyright:     bingImg.Copyright,
+		CopyrightLink: bingImg.CopyrightLink,
+		Quiz:          bingImg.Quiz,
+		StartDate:     bingImg.Startdate,
+		FullStartDate: bingImg.Fullstartdate,
+	}
+
+	if err := repo.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "date"}, {Name: "mkt"}},
+		UpdateAll: true,
+	}).Create(&regionRecord).Error; err != nil {
+		util.Logger.Error("Failed to create region record", zap.Error(err))
+		return err
+	}
+
+	// 4. 保存今日额外文件
+	today := time.Now().Format("2006-01-02")
+	if dateStr == today && config.GetConfig().Feature.WriteDailyFiles {
+		if imgData != nil && srcImg != nil {
 			f.saveDailyFiles(srcImg, imgData, mkt)
 		}
 	}
@@ -306,7 +277,7 @@ func (f *Fetcher) generateKey(imageName, variant, format string) string {
 	return fmt.Sprintf("%s/%s_%s.%s", imageName, imageName, variant, format)
 }
 
-func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, imageName, variant, format string, data []byte) error {
+func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format string, data []byte) error {
 	key := f.generateKey(imageName, variant, format)
 	contentType := "image/jpeg"
 	if format == "webp" {
@@ -319,13 +290,12 @@ func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, imageName, 
 	exists, _ := storage.GlobalStorage.Exists(ctx, key)
 	if exists {
 		util.Logger.Debug("Variant already exists in storage, linking", zap.String("key", key))
-		// 如果存在，我们需要获取它的大小和公共 URL (如果可能)
-		// 但目前的 Storage 接口没有 Stat，我们可以尝试 Get 或者干脆 size 为 0
-		// 为了简单，我们只从存储中获取公共 URL
+		// 如果存在，尝试获取公共 URL
 		if pURL, ok := storage.GlobalStorage.PublicURL(key); ok {
 			publicURL = pURL
 		}
-		// size 暂时设为 0 或者从 data 中取 (如果有的话)
+
+		// 如果传入了数据，则使用数据大小
 		if data != nil {
 			size = int64(len(data))
 		}
@@ -342,7 +312,7 @@ func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, imageName, 
 	}
 
 	vRecord := model.ImageVariant{
-		ImageID:    img.ID,
+		ImageName:  imageName,
 		Variant:    variant,
 		Format:     format,
 		StorageKey: key,
@@ -351,7 +321,7 @@ func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, imageName, 
 	}
 
 	return repo.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "image_id"}, {Name: "variant"}, {Name: "format"}},
+		Columns:   []clause.Column{{Name: "image_name"}, {Name: "variant"}, {Name: "format"}},
 		DoNothing: true,
 	}).Create(&vRecord).Error
 }
@@ -387,7 +357,7 @@ func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte, mkt st
 
 	// 同时也保留一份在根目录下（兼容旧逻辑，且作为默认地区图片）
 	// 如果是默认地区或者是第一个抓取的地区，可以覆盖根目录的文件
-	if mkt == config.GetConfig().GetDefaultMkt() {
+	if mkt == config.GetConfig().GetDefaultRegion() {
 		jpegPathRoot := filepath.Join(localRoot, "daily.jpeg")
 		fJpegRoot, err := os.Create(jpegPathRoot)
 		if err == nil {

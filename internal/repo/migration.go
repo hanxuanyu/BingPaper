@@ -29,19 +29,17 @@ func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
 	}
 
 	// 2. 自动迁移结构
-	if err := newDB.AutoMigrate(&model.Image{}, &model.ImageVariant{}, &model.Token{}); err != nil {
+	if err := newDB.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}); err != nil {
 		return fmt.Errorf("failed to migrate schema in new DB: %w", err)
 	}
 
 	// 3. 清空新数据库中的现有数据（防止冲突）
 	util.Logger.Info("Cleaning up destination database before migration")
-	// 备份或清空目标数据库。由于用户要求“可能需要清空或备份”，
-	// 这里我们选择在迁移前清空目标表，以确保迁移过来的数据是完整且不冲突的。
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ImageVariant{}).Error; err != nil {
 		return fmt.Errorf("failed to clear ImageVariants: %w", err)
 	}
-	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Image{}).Error; err != nil {
-		return fmt.Errorf("failed to clear Images: %w", err)
+	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ImageRegion{}).Error; err != nil {
+		return fmt.Errorf("failed to clear ImageRegions: %w", err)
 	}
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Token{}).Error; err != nil {
 		return fmt.Errorf("failed to clear Tokens: %w", err)
@@ -50,15 +48,15 @@ func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
 	// 4. 开始迁移数据
 	// 使用事务确保迁移的原子性
 	return newDB.Transaction(func(tx *gorm.DB) error {
-		// 迁移 Images
-		var images []model.Image
-		if err := oldDB.Find(&images).Error; err != nil {
-			return fmt.Errorf("failed to fetch images from old DB: %w", err)
+		// 迁移 ImageRegions
+		var regions []model.ImageRegion
+		if err := oldDB.Find(&regions).Error; err != nil {
+			return fmt.Errorf("failed to fetch image regions from old DB: %w", err)
 		}
-		if len(images) > 0 {
-			util.Logger.Info("Migrating images", zap.Int("count", len(images)))
-			if err := tx.Create(&images).Error; err != nil {
-				return fmt.Errorf("failed to insert images into new DB: %w", err)
+		if len(regions) > 0 {
+			util.Logger.Info("Migrating image regions", zap.Int("count", len(regions)))
+			if err := tx.Create(&regions).Error; err != nil {
+				return fmt.Errorf("failed to insert image regions into new DB: %w", err)
 			}
 		}
 

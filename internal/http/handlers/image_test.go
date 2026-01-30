@@ -21,11 +21,15 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 	config.GetConfig().API.Mode = "redirect"
 
 	// Mock Image and Variant
-	img := &model.Image{
-		Date:    "2026-01-26",
-		URLBase: "/th?id=OHR.TestImage",
+	imgRegion := &model.ImageRegion{
+		Date:      "2026-01-26",
+		Mkt:       "zh-CN",
+		HSH:       "testhsh",
+		ImageName: "TestImage",
+		URLBase:   "/th?id=OHR.TestImage",
 		Variants: []model.ImageVariant{
 			{
+				ImageName:  "TestImage",
 				Variant:    "UHD",
 				Format:     "jpg",
 				PublicURL:  "", // Empty for local storage simulation
@@ -39,7 +43,7 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 		c, _ := gin.CreateTestContext(w)
 		c.Request, _ = http.NewRequest("GET", "/api/v1/image/today?variant=UHD", nil)
 
-		handleImageResponse(c, img, 0)
+		handleImageResponse(c, imgRegion, 0)
 
 		assert.Equal(t, http.StatusFound, w.Code)
 		assert.Contains(t, w.Header().Get("Location"), "bing.com")
@@ -48,7 +52,7 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 
 	t.Run("FormatMeta in redirect mode should return Bing URL if PublicURL is empty", func(t *testing.T) {
 		config.GetConfig().API.Mode = "redirect"
-		meta := formatMeta(img)
+		meta := formatMeta(imgRegion)
 
 		variants := meta["variants"].([]gin.H)
 		assert.Equal(t, 1, len(variants))
@@ -59,7 +63,7 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 	t.Run("FormatMeta in local mode should return API URL", func(t *testing.T) {
 		config.GetConfig().API.Mode = "local"
 		config.GetConfig().Server.BaseURL = "http://myserver.com"
-		meta := formatMeta(img)
+		meta := formatMeta(imgRegion)
 
 		variants := meta["variants"].([]gin.H)
 		assert.Equal(t, 1, len(variants))
@@ -68,18 +72,34 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 	})
 
 	t.Run("FormatMetaSummary should only return the smallest variant", func(t *testing.T) {
-		imgWithMultipleVariants := &model.Image{
-			Date: "2026-01-26",
+		imgWithMultipleVariants := &model.ImageRegion{
+			Date:      "2026-01-26",
+			ImageName: "TestImage2",
 			Variants: []model.ImageVariant{
-				{Variant: "UHD", Size: 1000, Format: "jpg"},
-				{Variant: "640x480", Size: 200, Format: "jpg"},
-				{Variant: "1920x1080", Size: 500, Format: "jpg"},
+				{ImageName: "TestImage2", Variant: "UHD", Size: 1000, Format: "jpg"},
+				{ImageName: "TestImage2", Variant: "640x480", Size: 200, Format: "jpg"},
+				{ImageName: "TestImage2", Variant: "1920x1080", Size: 500, Format: "jpg"},
 			},
 		}
 		meta := formatMetaSummary(imgWithMultipleVariants)
 		variants := meta["variants"].([]gin.H)
 		assert.Equal(t, 1, len(variants))
 		assert.Equal(t, "640x480", variants[0]["variant"])
+	})
+
+	t.Run("FormatMetaSummary should handle zero size by following order if names suggest it", func(t *testing.T) {
+		imgWithZeroSize := &model.ImageRegion{
+			Date:      "2026-01-26",
+			ImageName: "TestImage3",
+			Variants: []model.ImageVariant{
+				{ImageName: "TestImage3", Variant: "UHD", Size: 0, Format: "jpg"},
+				{ImageName: "TestImage3", Variant: "320x240", Size: 0, Format: "jpg"},
+			},
+		}
+		meta := formatMetaSummary(imgWithZeroSize)
+		variants := meta["variants"].([]gin.H)
+		assert.Equal(t, 1, len(variants))
+		assert.Equal(t, "320x240", variants[0]["variant"])
 	})
 }
 

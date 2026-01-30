@@ -83,16 +83,18 @@
         <div class="relative group">
           <!-- 左右切换按钮 -->
           <button 
+            v-show="canScrollLeft"
             @click="scrollGlobal('left')"
-            class="absolute left-[-20px] top-1/2 -translate-y-1/2 z-20 p-2 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/10 hover:bg-black/70"
+            class="absolute left-[-20px] top-1/2 -translate-y-1/2 z-30 p-2 bg-black/60 backdrop-blur-md rounded-full text-white transition-all hidden md:block border border-white/10 hover:bg-black/80 hover:scale-110 active:scale-95 shadow-2xl"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
           </button>
           <button 
+            v-show="canScrollRight"
             @click="scrollGlobal('right')"
-            class="absolute right-[-20px] top-1/2 -translate-y-1/2 z-20 p-2 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-white/10 hover:bg-black/70"
+            class="absolute right-[-20px] top-1/2 -translate-y-1/2 z-30 p-2 bg-black/60 backdrop-blur-md rounded-full text-white transition-all hidden md:block border border-white/10 hover:bg-black/80 hover:scale-110 active:scale-95 shadow-2xl"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -102,7 +104,6 @@
           <div 
             ref="globalScrollContainer"
             class="flex overflow-x-auto gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x scroll-smooth"
-            @wheel="handleGlobalWheel"
           >
             <div 
               v-for="image in globalImages" 
@@ -139,7 +140,14 @@
           </div>
           
           <!-- 左右渐变遮罩 (仅在大屏显示) -->
-          <div class="absolute right-0 top-0 bottom-6 w-24 bg-gradient-to-l from-gray-900 to-transparent pointer-events-none hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div 
+            class="absolute left-0 top-0 bottom-6 w-24 bg-gradient-to-r from-gray-900 to-transparent pointer-events-none hidden md:block transition-opacity duration-500"
+            :class="canScrollLeft ? 'opacity-100' : 'opacity-0'"
+          ></div>
+          <div 
+            class="absolute right-0 top-0 bottom-6 w-24 bg-gradient-to-l from-gray-900 to-transparent pointer-events-none hidden md:block transition-opacity duration-500"
+            :class="canScrollRight ? 'opacity-100' : 'opacity-0'"
+          ></div>
         </div>
       </div>
     </section>
@@ -364,33 +372,23 @@ const { images: globalImages } = useGlobalTodayImages()
 
 // 滚动功能实现
 const globalScrollContainer = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+
+const updateScrollState = () => {
+  if (!globalScrollContainer.value) return
+  const { scrollLeft, scrollWidth, clientWidth } = globalScrollContainer.value
+  canScrollLeft.value = scrollLeft > 5
+  canScrollRight.value = scrollLeft + clientWidth < scrollWidth - 5
+}
+
 const scrollGlobal = (direction: 'left' | 'right') => {
   if (!globalScrollContainer.value) return
-  // 增加翻页数量：滚动容器宽度的 80%，或者固定 3 张卡片的宽度
   const scrollAmount = globalScrollContainer.value.clientWidth * 0.8 || 1000
   globalScrollContainer.value.scrollBy({
     left: direction === 'left' ? -scrollAmount : scrollAmount,
     behavior: 'smooth'
   })
-}
-
-// 鼠标滚轮横向滑动
-const handleGlobalWheel = (e: WheelEvent) => {
-  if (!globalScrollContainer.value) return
-  
-  const container = globalScrollContainer.value
-  const isAtStart = container.scrollLeft <= 0
-  const isAtEnd = Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth
-
-  // 当鼠标在滚动区域内，且是纵向滚动时
-  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-    // 如果还没滚动到尽头，则拦截纵向滚动并转为横向
-    if ((e.deltaY > 0 && !isAtEnd) || (e.deltaY < 0 && !isAtStart)) {
-      e.preventDefault()
-      // 加大滚动步进以实现“快速翻页”
-      container.scrollLeft += e.deltaY * 1.5
-    }
-  }
 }
 
 // 历史图片列表（使用服务端分页和筛选，每页15张）
@@ -419,19 +417,23 @@ const loadLatestImage = async () => {
   }
 }
 
-// 初始化加载
-onMounted(async () => {
-  try {
-    const backendRegions = await bingPaperApi.getRegions()
-    if (backendRegions && backendRegions.length > 0) {
-      regions.value = backendRegions
-      setSupportedRegions(backendRegions)
-    }
-  } catch (error) {
-    console.error('Failed to fetch regions:', error)
+
+// 监听滚动容器的变化
+watch(globalScrollContainer, (el, _, onCleanup) => {
+  if (el) {
+    el.addEventListener('scroll', updateScrollState)
+    // 初始检查
+    setTimeout(updateScrollState, 100)
+    onCleanup(() => {
+      el.removeEventListener('scroll', updateScrollState)
+    })
   }
-  loadLatestImage()
 })
+
+// 监听全球图片数据变化
+watch(globalImages, () => {
+  setTimeout(updateScrollState, 500)
+}, { deep: true })
 
 // 判断最新图片是否为今天的图片
 const isToday = computed(() => {
@@ -648,16 +650,34 @@ const setupLoadMoreObserver = () => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 1. 获取地区信息
+  try {
+    const backendRegions = await bingPaperApi.getRegions()
+    if (backendRegions && backendRegions.length > 0) {
+      regions.value = backendRegions
+      setSupportedRegions(backendRegions)
+    }
+  } catch (error) {
+    console.error('Failed to fetch regions:', error)
+  }
+
+  // 2. 加载最新图片
   loadLatestImage()
   
+  // 3. 设置观察者和滚动状态
   if (images.value.length > 0) {
     imageVisibility.value = new Array(images.value.length).fill(false)
-    setTimeout(() => {
-      setupObserver()
-      setupLoadMoreObserver()
-    }, 100)
   }
+  
+  setTimeout(() => {
+    setupObserver()
+    setupLoadMoreObserver()
+    updateScrollState()
+  }, 100)
+
+  // 4. 全局事件
+  window.addEventListener('resize', updateScrollState)
 })
 
 // 清理
@@ -668,6 +688,7 @@ onUnmounted(() => {
   if (loadMoreObserver) {
     loadMoreObserver.disconnect()
   }
+  window.removeEventListener('resize', updateScrollState)
 })
 
 // 格式化日期
