@@ -482,7 +482,7 @@ const allRegions = ref<any[]>([])
 
 const config = ref<Config>({
   Admin: { PasswordBcrypt: '' },
-  API: { Mode: 'local', EnableMktFallback: true },
+  API: { Mode: 'local', EnableMktFallback: true, EnableOnDemandFetch: false },
   Cron: { Enabled: true, DailySpec: '0 9 * * *' },
   DB: { Type: 'sqlite', DSN: '' },
   Feature: { WriteDailyFiles: true },

@@ -360,7 +360,7 @@ const latestImage = ref<any>(null)
 const todayLoading = ref(false)
 
 // 全球今日图片
-const { images: globalImages, loading: globalLoading } = useGlobalTodayImages()
+const { images: globalImages } = useGlobalTodayImages()
 
 // 滚动功能实现
 const globalScrollContainer = ref<HTMLElement | null>(null)
