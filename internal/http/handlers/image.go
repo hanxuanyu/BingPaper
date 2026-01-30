@@ -218,7 +218,7 @@ func ListImages(c *gin.Context) {
 
 	result := []gin.H{}
 	for _, img := range images {
-		result = append(result, formatMeta(&img))
+		result = append(result, formatMetaSummary(&img))
 	}
 	c.JSON(http.StatusOK, result)
 }
@@ -298,6 +298,49 @@ func serveLocal(c *gin.Context, key string, etag string, maxAge int) {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 	}
 	io.Copy(c.Writer, reader)
+}
+
+func formatMetaSummary(img *model.Image) gin.H {
+	cfg := config.GetConfig()
+
+	// 找到最小的变体（Size 最小）
+	var smallest *model.ImageVariant
+	for i := range img.Variants {
+		v := &img.Variants[i]
+		if smallest == nil || v.Size < smallest.Size {
+			smallest = v
+		}
+	}
+
+	variants := []gin.H{}
+	if smallest != nil {
+		url := smallest.PublicURL
+		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
+			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, smallest.Variant)
+		} else if cfg.API.Mode == "local" || url == "" {
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, smallest.Variant, smallest.Format, img.Mkt)
+		}
+		variants = append(variants, gin.H{
+			"variant":     smallest.Variant,
+			"format":      smallest.Format,
+			"size":        smallest.Size,
+			"url":         url,
+			"storage_key": smallest.StorageKey,
+		})
+	}
+
+	return gin.H{
+		"date":          img.Date,
+		"mkt":           img.Mkt,
+		"title":         img.Title,
+		"copyright":     img.Copyright,
+		"copyrightlink": img.CopyrightLink,
+		"quiz":          img.Quiz,
+		"startdate":     img.StartDate,
+		"fullstartdate": img.FullStartDate,
+		"hsh":           img.HSH,
+		"variants":      variants,
+	}
 }
 
 func formatMeta(img *model.Image) gin.H {

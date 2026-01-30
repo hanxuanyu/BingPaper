@@ -66,6 +66,21 @@ func TestHandleImageResponseRedirect(t *testing.T) {
 		assert.Contains(t, variants[0]["url"].(string), "myserver.com")
 		assert.Contains(t, variants[0]["url"].(string), "/api/v1/image/date/")
 	})
+
+	t.Run("FormatMetaSummary should only return the smallest variant", func(t *testing.T) {
+		imgWithMultipleVariants := &model.Image{
+			Date: "2026-01-26",
+			Variants: []model.ImageVariant{
+				{Variant: "UHD", Size: 1000, Format: "jpg"},
+				{Variant: "640x480", Size: 200, Format: "jpg"},
+				{Variant: "1920x1080", Size: 500, Format: "jpg"},
+			},
+		}
+		meta := formatMetaSummary(imgWithMultipleVariants)
+		variants := meta["variants"].([]gin.H)
+		assert.Equal(t, 1, len(variants))
+		assert.Equal(t, "640x480", variants[0]["variant"])
+	})
 }
 
 func TestGetRegions(t *testing.T) {

@@ -156,7 +156,7 @@
         </div>
 
         <!-- 图片网格 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           <div 
             v-for="(image, index) in images" 
             :key="image.date || index"
@@ -264,6 +264,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useImageList } from '@/composables/useImages'
 import { bingPaperApi } from '@/lib/api-service'
+import { normalizeImageUrl } from '@/lib/api-config'
 import { useRouter } from 'vue-router'
 import { getDefaultMkt, setSavedMkt, SUPPORTED_REGIONS, setSupportedRegions } from '@/lib/mkt-utils'
 import {
@@ -570,8 +571,11 @@ const getLatestImageUrl = () => {
   return bingPaperApi.getImageUrlByDate(latestImage.value.date, 'UHD', 'jpg', latestImage.value.mkt)
 }
 
-// 获取图片 URL（缩略图 - 使用较小分辨率节省流量）
+// 获取图片 URL（缩略图 - 优先使用后端返回的最小变体以节省流量）
 const getImageUrl = (image: any) => {
+  if (image.variants && image.variants.length > 0) {
+    return normalizeImageUrl(image.variants[0].url)
+  }
   return bingPaperApi.getImageUrlByDate(image.date!, '640x480', 'jpg', image.mkt)
 }
 
