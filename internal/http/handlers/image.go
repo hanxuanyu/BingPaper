@@ -48,11 +48,16 @@ type ImageMetaResp struct {
 // @Param format query string false "格式 (jpg)" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/today [get]
 func GetToday(c *gin.Context) {
 	mkt := c.Query("mkt")
 	img, err := image.GetTodayImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return
@@ -67,11 +72,16 @@ func GetToday(c *gin.Context) {
 // @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/today/meta [get]
 func GetTodayMeta(c *gin.Context) {
 	mkt := c.Query("mkt")
 	img, err := image.GetTodayImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return
@@ -89,11 +99,16 @@ func GetTodayMeta(c *gin.Context) {
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/random [get]
 func GetRandom(c *gin.Context) {
 	mkt := c.Query("mkt")
 	img, err := image.GetRandomImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return
@@ -108,11 +123,16 @@ func GetRandom(c *gin.Context) {
 // @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/random/meta [get]
 func GetRandomMeta(c *gin.Context) {
 	mkt := c.Query("mkt")
 	img, err := image.GetRandomImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return
@@ -131,12 +151,17 @@ func GetRandomMeta(c *gin.Context) {
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/date/{date} [get]
 func GetByDate(c *gin.Context) {
 	date := c.Param("date")
 	mkt := c.Query("mkt")
 	img, err := image.GetImageByDate(date, mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return
@@ -152,12 +177,17 @@ func GetByDate(c *gin.Context) {
 // @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
 // @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/date/{date}/meta [get]
 func GetByDateMeta(c *gin.Context) {
 	date := c.Param("date")
 	mkt := c.Query("mkt")
 	img, err := image.GetImageByDate(date, mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
 		sendImageNotFound(c, mkt)
 		return

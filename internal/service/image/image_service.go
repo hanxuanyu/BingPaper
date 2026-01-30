@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 
 	"go.uber.org/zap"
 )
+
+var ErrFetchStarted = errors.New("on-demand fetch started")
 
 func CleanupOldImages(ctx context.Context) error {
 	days := config.GetConfig().Retention.Days
@@ -60,14 +63,13 @@ func GetTodayImage(mkt string) (*model.Image, error) {
 	}
 	err := tx.Preload("Variants").First(&img).Error
 	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
-		// 如果没找到，尝试按需抓取该地区
-		util.Logger.Info("Image not found in DB, attempting on-demand fetch", zap.String("mkt", mkt))
+		// 如果没找到，尝试异步按需抓取该地区
+		util.Logger.Info("Image not found in DB, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
-		_ = f.FetchRegion(context.Background(), mkt)
-
-		// 抓取后重新查询
-		tx = repo.DB.Where("date = ?", today).Where("mkt = ?", mkt)
-		err = tx.Preload("Variants").First(&img).Error
+		go func() {
+			_ = f.FetchRegion(context.Background(), mkt)
+		}()
+		return nil, ErrFetchStarted
 	}
 
 	if err != nil {
@@ -118,14 +120,13 @@ func GetRandomImage(mkt string) (*model.Image, error) {
 	}
 	tx.Count(&count)
 	if count == 0 && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
-		// 如果没找到，尝试按需抓取该地区
-		util.Logger.Info("No images found in DB for region, attempting on-demand fetch", zap.String("mkt", mkt))
+		// 如果没找到，尝试异步按需抓取该地区
+		util.Logger.Info("No images found in DB for region, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
-		_ = f.FetchRegion(context.Background(), mkt)
-
-		// 抓取后重新计数
-		tx = repo.DB.Model(&model.Image{}).Where("mkt = ?", mkt)
-		tx.Count(&count)
+		go func() {
+			_ = f.FetchRegion(context.Background(), mkt)
+		}()
+		return nil, ErrFetchStarted
 	}
 
 	if count == 0 {
@@ -167,14 +168,13 @@ func GetImageByDate(date string, mkt string) (*model.Image, error) {
 	}
 	err := tx.Preload("Variants").First(&img).Error
 	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
-		// 如果没找到，尝试按需抓取该地区
-		util.Logger.Info("Image not found in DB for date, attempting on-demand fetch", zap.String("mkt", mkt), zap.String("date", date))
+		// 如果没找到，尝试异步按需抓取该地区
+		util.Logger.Info("Image not found in DB for date, starting asynchronous on-demand fetch", zap.String("mkt", mkt), zap.String("date", date))
 		f := fetcher.NewFetcher()
-		_ = f.FetchRegion(context.Background(), mkt)
-
-		// 抓取后重新查询
-		tx = repo.DB.Where("date = ?", date).Where("mkt = ?", mkt)
-		err = tx.Preload("Variants").First(&img).Error
+		go func() {
+			_ = f.FetchRegion(context.Background(), mkt)
+		}()
+		return nil, ErrFetchStarted
 	}
 
 	// 兜底逻辑

@@ -32,6 +32,4 @@ var AllRegions = []Region{
 	{Value: "ko-KR", Label: "韩国"},
 	{Value: "en-IN", Label: "印度"},
 	{Value: "ru-RU", Label: "俄罗斯"},
-	{Value: "zh-HK", Label: "中国香港"},
-	{Value: "zh-TW", Label: "中国台湾"},
 }
