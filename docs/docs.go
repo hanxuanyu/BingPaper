@@ -415,6 +415,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "default": "UHD",
                         "description": "分辨率",
                         "name": "variant",
@@ -433,6 +439,24 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "file"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -455,6 +479,12 @@ const docTemplate = `{
                         "name": "date",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -462,6 +492,24 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -478,6 +526,12 @@ const docTemplate = `{
                 ],
                 "summary": "获取随机图片",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
+                    },
                     {
                         "type": "string",
                         "default": "UHD",
@@ -499,6 +553,24 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -513,11 +585,37 @@ const docTemplate = `{
                     "image"
                 ],
                 "summary": "获取随机图片元数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -534,6 +632,12 @@ const docTemplate = `{
                 ],
                 "summary": "获取今日图片",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
+                    },
                     {
                         "type": "string",
                         "default": "UHD",
@@ -555,6 +659,24 @@ const docTemplate = `{
                         "schema": {
                             "type": "file"
                         }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -569,11 +691,37 @@ const docTemplate = `{
                     "image"
                 ],
                 "summary": "获取今日图片元数据",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handlers.ImageMetaResp"
+                        }
+                    },
+                    "202": {
+                        "description": "按需抓取任务已启动",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "图片未找到，响应体包含具体原因",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -614,6 +762,12 @@ const docTemplate = `{
                         "description": "按月份过滤 (格式: YYYY-MM)",
                         "name": "month",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "name": "mkt",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -628,12 +782,66 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/images/global/today": {
+            "get": {
+                "description": "获取配置文件中所有已开启地区的今日必应图片元数据（缩略图）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取所有地区的今日图片列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.ImageMetaResp"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/regions": {
+            "get": {
+                "description": "返回系统支持的所有必应地区编码及标签。如果配置中指定了抓取地区，这些地区将排在列表最前面（置顶）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "获取支持的地区列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/util.Region"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "config.APIConfig": {
             "type": "object",
             "properties": {
+                "enableMktFallback": {
+                    "description": "当请求的地区不存在时，是否回退到默认地区",
+                    "type": "boolean"
+                },
+                "enableOnDemandFetch": {
+                    "description": "是否启用按需抓取",
+                    "type": "boolean"
+                },
                 "mode": {
                     "description": "local | redirect",
                     "type": "string"
@@ -665,6 +873,9 @@ const docTemplate = `{
                 },
                 "feature": {
                     "$ref": "#/definitions/config.FeatureConfig"
+                },
+                "fetcher": {
+                    "$ref": "#/definitions/config.FetcherConfig"
                 },
                 "log": {
                     "$ref": "#/definitions/config.LogConfig"
@@ -714,6 +925,17 @@ const docTemplate = `{
             "properties": {
                 "writeDailyFiles": {
                     "type": "boolean"
+                }
+            }
+        },
+        "config.FetcherConfig": {
+            "type": "object",
+            "properties": {
+                "regions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -917,6 +1139,9 @@ const docTemplate = `{
                 "hsh": {
                     "type": "string"
                 },
+                "mkt": {
+                    "type": "string"
+                },
                 "quiz": {
                     "type": "string"
                 },
@@ -1003,6 +1228,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "util.Region": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "value": {
                     "type": "string"
                 }
             }

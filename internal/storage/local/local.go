@@ -63,3 +63,15 @@ func (l *LocalStorage) Delete(ctx context.Context, key string) error {
 func (l *LocalStorage) PublicURL(key string) (string, bool) {
 	return "", false
 }
+
+func (l *LocalStorage) Exists(ctx context.Context, key string) (bool, error) {
+	path := filepath.Join(l.root, key)
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}

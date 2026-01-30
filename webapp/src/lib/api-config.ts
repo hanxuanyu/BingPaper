@@ -36,6 +36,26 @@ export const buildApiUrl = (endpoint: string): string => {
 }
 
 /**
+ * 标准化图片 URL
+ * 当后端返回相对路径且配置了绝对 API 基础地址时，自动拼接完整域名
+ */
+export const normalizeImageUrl = (url: string | undefined): string => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+
+  // 处理相对路径问题：如果配置了绝对 API 基础地址，则拼接 Origin
+  if (API_BASE_URL.startsWith('http')) {
+    try {
+      const origin = new URL(API_BASE_URL).origin
+      return url.startsWith('/') ? origin + url : origin + '/' + url
+    } catch (e) {
+      // 解析失败则返回原样
+    }
+  }
+  return url
+}
+
+/**
  * HTTP 状态码枚举
  */
 export const HTTP_STATUS = {

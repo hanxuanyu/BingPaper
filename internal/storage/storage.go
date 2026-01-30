@@ -17,6 +17,7 @@ type Storage interface {
 	Get(ctx context.Context, key string) (io.ReadCloser, string, error)
 	Delete(ctx context.Context, key string) error
 	PublicURL(key string) (string, bool)
+	Exists(ctx context.Context, key string) (bool, error)
 }
 
 var GlobalStorage Storage

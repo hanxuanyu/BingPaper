@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"BingPaper/internal/config"
 	"BingPaper/internal/model"
@@ -27,6 +28,7 @@ type ImageVariantResp struct {
 
 type ImageMetaResp struct {
 	Date          string             `json:"date"`
+	Mkt           string             `json:"mkt"`
 	Title         string             `json:"title"`
 	Copyright     string             `json:"copyright"`
 	CopyrightLink string             `json:"copyrightlink"`
@@ -41,15 +43,23 @@ type ImageMetaResp struct {
 // @Summary 获取今日图片
 // @Description 根据参数返回今日必应图片流或重定向
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240)" default(UHD)
 // @Param format query string false "格式 (jpg)" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/today [get]
 func GetToday(c *gin.Context) {
-	img, err := image.GetTodayImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetTodayImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	handleImageResponse(c, img, 7200) // 2小时
@@ -59,13 +69,21 @@ func GetToday(c *gin.Context) {
 // @Summary 获取今日图片元数据
 // @Description 获取今日必应图片的标题、版权等元数据
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/today/meta [get]
 func GetTodayMeta(c *gin.Context) {
-	img, err := image.GetTodayImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetTodayImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	c.Header("Cache-Control", "public, max-age=7200") // 2小时
@@ -76,15 +94,23 @@ func GetTodayMeta(c *gin.Context) {
 // @Summary 获取随机图片
 // @Description 随机返回一张已抓取的图片流或重定向
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/random [get]
 func GetRandom(c *gin.Context) {
-	img, err := image.GetRandomImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetRandomImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	handleImageResponse(c, img, 0) // 禁用缓存
@@ -94,13 +120,21 @@ func GetRandom(c *gin.Context) {
 // @Summary 获取随机图片元数据
 // @Description 随机获取一张已抓取图片的元数据
 // @Tags image
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/random/meta [get]
 func GetRandomMeta(c *gin.Context) {
-	img, err := image.GetRandomImage()
+	mkt := c.Query("mkt")
+	img, err := image.GetRandomImage(mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -112,16 +146,24 @@ func GetRandomMeta(c *gin.Context) {
 // @Description 根据日期返回图片流或重定向 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
 // @Success 200 {file} binary
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/date/{date} [get]
 func GetByDate(c *gin.Context) {
 	date := c.Param("date")
-	img, err := image.GetImageByDate(date)
+	mkt := c.Query("mkt")
+	img, err := image.GetImageByDate(date, mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	handleImageResponse(c, img, 604800) // 7天
@@ -132,14 +174,22 @@ func GetByDate(c *gin.Context) {
 // @Description 根据日期获取图片元数据 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
+// @Success 202 {object} map[string]string "按需抓取任务已启动"
+// @Failure 404 {object} map[string]string "图片未找到，响应体包含具体原因"
 // @Router /image/date/{date}/meta [get]
 func GetByDateMeta(c *gin.Context) {
 	date := c.Param("date")
-	img, err := image.GetImageByDate(date)
+	mkt := c.Query("mkt")
+	img, err := image.GetImageByDate(date, mkt)
+	if err == image.ErrFetchStarted {
+		c.JSON(http.StatusAccepted, gin.H{"message": fmt.Sprintf("On-demand fetch started for region [%s]. Please try again later.", mkt)})
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		sendImageNotFound(c, mkt)
 		return
 	}
 	c.Header("Cache-Control", "public, max-age=604800") // 7天
@@ -154,6 +204,7 @@ func GetByDateMeta(c *gin.Context) {
 // @Param page query int false "页码 (从1开始)"
 // @Param page_size query int false "每页数量"
 // @Param month query string false "按月份过滤 (格式: YYYY-MM)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
 // @Produce json
 // @Success 200 {array} ImageMetaResp
 // @Router /images [get]
@@ -162,10 +213,12 @@ func ListImages(c *gin.Context) {
 	pageStr := c.Query("page")
 	pageSizeStr := c.Query("page_size")
 	month := c.Query("month")
+	mkt := c.Query("mkt")
 
 	// 记录请求参数，便于排查过滤失效问题
 	util.Logger.Debug("ListImages parameters",
 		zap.String("month", month),
+		zap.String("mkt", mkt),
 		zap.String("page", pageStr),
 		zap.String("page_size", pageSizeStr),
 		zap.String("limit", limitStr))
@@ -192,7 +245,7 @@ func ListImages(c *gin.Context) {
 		offset = 0
 	}
 
-	images, err := image.GetImageList(limit, offset, month)
+	images, err := image.GetImageList(limit, offset, month, mkt)
 	if err != nil {
 		util.Logger.Error("ListImages service call failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -201,9 +254,58 @@ func ListImages(c *gin.Context) {
 
 	result := []gin.H{}
 	for _, img := range images {
-		result = append(result, formatMeta(&img))
+		result = append(result, formatMetaSummary(&img))
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+// ListGlobalTodayImages 获取所有地区的今日图片列表
+// @Summary 获取所有地区的今日图片列表
+// @Description 获取配置文件中所有已开启地区的今日必应图片元数据（缩略图）
+// @Tags image
+// @Produce json
+// @Success 200 {array} ImageMetaResp
+// @Router /images/global/today [get]
+func ListGlobalTodayImages(c *gin.Context) {
+	images, err := image.GetAllRegionsTodayImages()
+	if err != nil {
+		util.Logger.Error("ListGlobalTodayImages service call failed", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := []gin.H{}
+	for _, img := range images {
+		result = append(result, formatMetaSummary(&img))
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func sendImageNotFound(c *gin.Context, mkt string) {
+	cfg := config.GetConfig().API
+	message := "image not found"
+
+	if mkt != "" {
+		reasons := []string{}
+		if !util.IsValidRegion(mkt) {
+			reasons = append(reasons, fmt.Sprintf("[%s] is not a standard region code", mkt))
+		} else {
+			if !cfg.EnableOnDemandFetch {
+				reasons = append(reasons, "on-demand fetch is disabled")
+			}
+			if !cfg.EnableMktFallback {
+				reasons = append(reasons, "region fallback is disabled")
+			}
+		}
+
+		if len(reasons) > 0 {
+			message = fmt.Sprintf("Image not found for region [%s]. Reasons: %s.", mkt, strings.Join(reasons, ", "))
+		} else {
+			message = fmt.Sprintf("Image not found for region [%s] even after on-demand fetch and fallback attempts.", mkt)
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": message})
 }
 
 func handleImageResponse(c *gin.Context, img *model.Image, maxAge int) {
@@ -283,6 +385,49 @@ func serveLocal(c *gin.Context, key string, etag string, maxAge int) {
 	io.Copy(c.Writer, reader)
 }
 
+func formatMetaSummary(img *model.Image) gin.H {
+	cfg := config.GetConfig()
+
+	// 找到最小的变体（Size 最小）
+	var smallest *model.ImageVariant
+	for i := range img.Variants {
+		v := &img.Variants[i]
+		if smallest == nil || v.Size < smallest.Size {
+			smallest = v
+		}
+	}
+
+	variants := []gin.H{}
+	if smallest != nil {
+		url := smallest.PublicURL
+		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
+			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, smallest.Variant)
+		} else if cfg.API.Mode == "local" || url == "" {
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, smallest.Variant, smallest.Format, img.Mkt)
+		}
+		variants = append(variants, gin.H{
+			"variant":     smallest.Variant,
+			"format":      smallest.Format,
+			"size":        smallest.Size,
+			"url":         url,
+			"storage_key": smallest.StorageKey,
+		})
+	}
+
+	return gin.H{
+		"date":          img.Date,
+		"mkt":           img.Mkt,
+		"title":         img.Title,
+		"copyright":     img.Copyright,
+		"copyrightlink": img.CopyrightLink,
+		"quiz":          img.Quiz,
+		"startdate":     img.StartDate,
+		"fullstartdate": img.FullStartDate,
+		"hsh":           img.HSH,
+		"variants":      variants,
+	}
+}
+
 func formatMeta(img *model.Image) gin.H {
 	cfg := config.GetConfig()
 	variants := []gin.H{}
@@ -291,7 +436,7 @@ func formatMeta(img *model.Image) gin.H {
 		if url == "" && cfg.API.Mode == "redirect" && img.URLBase != "" {
 			url = fmt.Sprintf("https://www.bing.com%s_%s.jpg", img.URLBase, v.Variant)
 		} else if cfg.API.Mode == "local" || url == "" {
-			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format)
+			url = fmt.Sprintf("%s/api/v1/image/date/%s?variant=%s&format=%s&mkt=%s", cfg.Server.BaseURL, img.Date, v.Variant, v.Format, img.Mkt)
 		}
 		variants = append(variants, gin.H{
 			"variant":     v.Variant,
@@ -304,6 +449,7 @@ func formatMeta(img *model.Image) gin.H {
 
 	return gin.H{
 		"date":          img.Date,
+		"mkt":           img.Mkt,
 		"title":         img.Title,
 		"copyright":     img.Copyright,
 		"copyrightlink": img.CopyrightLink,
@@ -313,4 +459,64 @@ func formatMeta(img *model.Image) gin.H {
 		"hsh":           img.HSH,
 		"variants":      variants,
 	}
+}
+
+// GetRegions 获取支持的地区列表
+// @Summary 获取支持的地区列表
+// @Description 返回系统支持的所有必应地区编码及标签。如果配置中指定了抓取地区，这些地区将排在列表最前面（置顶）。
+// @Tags image
+// @Produce json
+// @Success 200 {array} util.Region
+// @Router /regions [get]
+func GetRegions(c *gin.Context) {
+	cfg := config.GetConfig()
+	pinned := cfg.Fetcher.Regions
+
+	if len(pinned) == 0 {
+		// 如果没有配置抓取地区，返回所有支持的地区
+		c.JSON(http.StatusOK, util.AllRegions)
+		return
+	}
+
+	// 创建一个 Map 用于快速查找配置的地区
+	pinnedMap := make(map[string]bool)
+	for _, v := range pinned {
+		pinnedMap[v] = true
+	}
+
+	// 只返回配置中的地区，并保持配置中的顺序
+	var result []util.Region
+	// 为了保持配置顺序，我们遍历 pinned 而不是 AllRegions
+	for _, pVal := range pinned {
+		for _, r := range util.AllRegions {
+			if r.Value == pVal {
+				result = append(result, r)
+				break
+			}
+		}
+	}
+
+	// 如果配置了一些不在 AllRegions 里的 mkt，上述循环可能漏掉
+	// 但根据之前的逻辑，AllRegions 是已知的 17 个地区。
+	// 如果用户配置了 fr-CA (不在 17 个内)，我们也应该返回它吗？
+	// 需求说 "前端页面对地区进行约束"，如果配置了，前端就该显示。
+	// 如果不在 AllRegions 里的，我们直接返回原始编码作为 label 或者查找一下。
+
+	if len(result) < len(pinned) {
+		// 补全不在 AllRegions 里的地区
+		for _, pVal := range pinned {
+			found := false
+			for _, r := range result {
+				if r.Value == pVal {
+					found = true
+					break
+				}
+			}
+			if !found {
+				result = append(result, util.Region{Value: pVal, Label: pVal})
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, result)
 }

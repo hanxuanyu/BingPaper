@@ -11,6 +11,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+
+	"BingPaper/internal/util"
 )
 
 type Config struct {
@@ -25,6 +27,7 @@ type Config struct {
 	Token     TokenConfig     `mapstructure:"token" yaml:"token"`
 	Feature   FeatureConfig   `mapstructure:"feature" yaml:"feature"`
 	Web       WebConfig       `mapstructure:"web" yaml:"web"`
+	Fetcher   FetcherConfig   `mapstructure:"fetcher" yaml:"fetcher"`
 }
 
 type ServerConfig struct {
@@ -57,7 +60,9 @@ func (c LogConfig) GetShowDBLog() bool    { return c.ShowDBLog }
 func (c LogConfig) GetDBLogLevel() string { return c.DBLogLevel }
 
 type APIConfig struct {
-	Mode string `mapstructure:"mode" yaml:"mode"` // local | redirect
+	Mode                string `mapstructure:"mode" yaml:"mode"`                                     // local | redirect
+	EnableMktFallback   bool   `mapstructure:"enable_mkt_fallback" yaml:"enable_mkt_fallback"`       // 当请求的地区不存在时，是否回退到默认地区
+	EnableOnDemandFetch bool   `mapstructure:"enable_on_demand_fetch" yaml:"enable_on_demand_fetch"` // 是否启用按需抓取
 }
 
 type CronConfig struct {
@@ -118,6 +123,10 @@ type WebConfig struct {
 	Path string `mapstructure:"path" yaml:"path"`
 }
 
+type FetcherConfig struct {
+	Regions []string `mapstructure:"regions" yaml:"regions"`
+}
+
 // Bing 默认配置 (内置)
 const (
 	BingMkt     = "zh-CN"
@@ -156,7 +165,9 @@ func Init(configPath string) error {
 	v.SetDefault("log.log_console", true)
 	v.SetDefault("log.show_db_log", false)
 	v.SetDefault("log.db_log_level", "info")
-	v.SetDefault("api.mode", "local")
+	v.SetDefault("api.mode", "redirect")
+	v.SetDefault("api.enable_mkt_fallback", false)
+	v.SetDefault("api.enable_on_demand_fetch", false)
 	v.SetDefault("cron.enabled", true)
 	v.SetDefault("cron.daily_spec", "20 8-23/4 * * *")
 	v.SetDefault("retention.days", 0)
@@ -167,6 +178,13 @@ func Init(configPath string) error {
 	v.SetDefault("token.default_ttl", "168h")
 	v.SetDefault("feature.write_daily_files", true)
 	v.SetDefault("web.path", "web")
+
+	// 默认抓取所有支持的地区
+	var defaultRegions []string
+	for _, r := range util.AllRegions {
+		defaultRegions = append(defaultRegions, r.Value)
+	}
+	v.SetDefault("fetcher.regions", defaultRegions)
 	v.SetDefault("admin.password_bcrypt", "$2a$10$fYHPeWHmwObephJvtlyH1O8DIgaLk5TINbi9BOezo2M8cSjmJchka") // 默认密码: admin123
 
 	// 绑定环境变量
@@ -310,4 +328,12 @@ func GetTokenTTL() time.Duration {
 		return 168 * time.Hour
 	}
 	return ttl
+}
+
+// GetDefaultMkt 返回生效的默认地区编码
+func (c *Config) GetDefaultMkt() string {
+	if len(c.Fetcher.Regions) > 0 {
+		return c.Fetcher.Regions[0]
+	}
+	return BingMkt
 }

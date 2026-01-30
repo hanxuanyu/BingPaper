@@ -16,6 +16,8 @@ log:
 
 api:
   mode: local # local | redirect
+  enable_mkt_fallback: true # 当请求的地区不存在时，是否回退到默认地区
+  enable_on_demand_fetch: false # 是否开启按需抓取（当数据库中没有请求的地区图片时，实时从 Bing 抓取）
 
 cron:
   enabled: true

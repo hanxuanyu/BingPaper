@@ -47,6 +47,8 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 			img.GET("/date/:date/meta", handlers.GetByDateMeta)
 		}
 		api.GET("/images", handlers.ListImages)
+		api.GET("/images/global/today", handlers.ListGlobalTodayImages)
+		api.GET("/regions", handlers.GetRegions)
 
 		// 管理接口
 		admin := api.Group("/admin")

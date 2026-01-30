@@ -61,6 +61,11 @@ export interface Config {
   Token: TokenConfig
   Feature: FeatureConfig
   Web: WebConfig
+  Fetcher: FetcherConfig
+}
+
+export interface FetcherConfig {
+  Regions: string[]
 }
 
 export interface AdminConfig {
@@ -69,6 +74,8 @@ export interface AdminConfig {
 
 export interface APIConfig {
   Mode: string // 'local' | 'redirect'
+  EnableMktFallback: boolean
+  EnableOnDemandFetch: boolean
 }
 
 export interface CronConfig {
@@ -147,6 +154,7 @@ export interface WebConfig {
 
 export interface ImageMeta {
   date?: string
+  mkt?: string
   title?: string
   copyright?: string
   copyrightlink?: string    // 图片的详细版权链接（指向 Bing 搜索页面）
@@ -173,6 +181,12 @@ export interface ImageListParams extends PaginationParams {
   page?: number        // 页码（从1开始）
   page_size?: number   // 每页数量
   month?: string       // 按月份过滤（格式：YYYY-MM）
+  mkt?: string         // 地区编码
+}
+
+export interface Region {
+  value: string
+  label: string
 }
 
 export interface ManualFetchRequest {
