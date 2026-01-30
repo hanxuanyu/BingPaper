@@ -115,19 +115,19 @@ func GetTodayImage(mkt string) (*model.ImageRegion, error) {
 }
 
 func GetAllRegionsTodayImages() ([]model.ImageRegion, error) {
+	today := time.Now().Format("2006-01-02")
 	regions := config.GetConfig().Fetcher.Regions
 	if len(regions) == 0 {
 		regions = []string{config.GetConfig().GetDefaultRegion()}
 	}
 
 	var images []model.ImageRegion
-	for _, mkt := range regions {
-		img, err := GetTodayImage(mkt)
-		if err == nil {
-			images = append(images, *img)
-		}
-	}
-	return images, nil
+	err := repo.DB.Where("date = ? AND mkt IN ?", today, regions).
+		Preload("Variants", func(db *gorm.DB) *gorm.DB {
+			return db.Order("size asc")
+		}).Find(&images).Error
+
+	return images, err
 }
 
 func GetRandomImage(mkt string) (*model.ImageRegion, error) {
