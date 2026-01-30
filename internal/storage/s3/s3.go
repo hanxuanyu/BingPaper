@@ -100,3 +100,18 @@ func (s *S3Storage) PublicURL(key string) (string, bool) {
 	// 也可以生成签名 URL，但这里简单处理
 	return "", false
 }
+
+func (s *S3Storage) Exists(ctx context.Context, key string) (bool, error) {
+	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		// 判断是否为 404
+		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "404") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}

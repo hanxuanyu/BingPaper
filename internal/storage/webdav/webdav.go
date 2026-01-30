@@ -72,3 +72,16 @@ func (w *WebDAVStorage) PublicURL(key string) (string, bool) {
 	}
 	return "", false
 }
+
+func (w *WebDAVStorage) Exists(ctx context.Context, key string) (bool, error) {
+	_, err := w.client.Stat(key)
+	if err == nil {
+		return true, nil
+	}
+	// gowebdav 的错误处理比较原始，通常 404 会返回错误
+	// 这里假设报错就是不存在，或者可以根据错误消息判断
+	if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
+		return false, nil
+	}
+	return false, err
+}

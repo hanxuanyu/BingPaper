@@ -8,8 +8,8 @@ import (
 
 type Image struct {
 	ID            uint           `gorm:"primaryKey" json:"id"`
-	Date          string         `gorm:"uniqueIndex:idx_date_mkt;type:varchar(10)" json:"date"` // YYYY-MM-DD
-	Mkt           string         `gorm:"uniqueIndex:idx_date_mkt;type:varchar(10)" json:"mkt"`  // zh-CN, en-US etc.
+	Date          string         `gorm:"uniqueIndex:idx_date_mkt;index:idx_mkt_date,priority:2;type:varchar(10)" json:"date"` // YYYY-MM-DD
+	Mkt           string         `gorm:"uniqueIndex:idx_date_mkt;index:idx_mkt_date,priority:1;type:varchar(10)" json:"mkt"`  // zh-CN, en-US etc.
 	Title         string         `json:"title"`
 	Copyright     string         `json:"copyright"`
 	CopyrightLink string         `json:"copyrightlink"`

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"BingPaper/internal/config"
@@ -124,27 +125,12 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 	// 幂等检查
 	var existing model.Image
 	if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existing).Error; err == nil {
-		util.Logger.Info("Image already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt))
+		util.Logger.Debug("Image already exists in DB, skipping", zap.String("date", dateStr), zap.String("mkt", mkt))
 		return nil
 	}
 
-	util.Logger.Info("Processing new image", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("title", bingImg.Title))
-
-	// UHD 探测
-	imgURL, variantName := f.probeUHD(bingImg.URLBase)
-
-	imgData, err := f.downloadImage(imgURL)
-	if err != nil {
-		util.Logger.Error("Failed to download image", zap.String("url", imgURL), zap.Error(err))
-		return err
-	}
-
-	// 解码图片用于缩放
-	srcImg, _, err := image.Decode(bytes.NewReader(imgData))
-	if err != nil {
-		util.Logger.Error("Failed to decode image data", zap.Error(err))
-		return err
-	}
+	imageName := f.extractImageName(bingImg.URLBase, bingImg.HSH)
+	util.Logger.Info("Processing image", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("imageName", imageName))
 
 	// 创建 DB 记录
 	dbImg := model.Image{
@@ -168,7 +154,6 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		return err
 	}
 
-	// 再次检查 dbImg.ID 是否被填充，如果没有被填充（说明由于冲突未插入），则需要查询出已有的 ID
 	if dbImg.ID == 0 {
 		var existing model.Image
 		if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existing).Error; err != nil {
@@ -177,6 +162,9 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		}
 		dbImg = existing
 	}
+
+	// UHD 探测
+	imgURL, variantName := f.probeUHD(bingImg.URLBase)
 
 	// 保存各种分辨率
 	targetVariants := []struct {
@@ -197,38 +185,103 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		{"320x240", 320, 240},
 	}
 
-	// 首先保存原图 (UHD 或 1080p)
-	if err := f.saveVariant(ctx, &dbImg, variantName, "jpg", imgData); err != nil {
-		util.Logger.Error("Failed to save original variant", zap.String("variant", variantName), zap.Error(err))
-	}
-
-	for _, v := range targetVariants {
-		// 如果目标分辨率就是原图分辨率，则跳过（已经保存过了）
-		if v.name == variantName {
-			continue
-		}
-
-		resized := imaging.Fill(srcImg, v.width, v.height, imaging.Center, imaging.Lanczos)
-		buf := new(bytes.Buffer)
-		if err := jpeg.Encode(buf, resized, &jpeg.Options{Quality: 100}); err != nil {
-			util.Logger.Warn("Failed to encode jpeg", zap.String("variant", v.name), zap.Error(err))
-			continue
-		}
-		currentImgData := buf.Bytes()
-
-		// 保存 JPG
-		if err := f.saveVariant(ctx, &dbImg, v.name, "jpg", currentImgData); err != nil {
-			util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
+	// 检查是否所有变体都已存在于存储中
+	allExist := true
+	// 检查 UHD/原图
+	uhdKey := f.generateKey(imageName, variantName, "jpg")
+	exists, _ := storage.GlobalStorage.Exists(ctx, uhdKey)
+	if !exists {
+		allExist = false
+	} else {
+		for _, v := range targetVariants {
+			if v.name == variantName {
+				continue
+			}
+			vKey := f.generateKey(imageName, v.name, "jpg")
+			exists, _ := storage.GlobalStorage.Exists(ctx, vKey)
+			if !exists {
+				allExist = false
+				break
+			}
 		}
 	}
 
-	// 保存今日额外文件
-	today := time.Now().Format("2006-01-02")
-	if dateStr == today && config.GetConfig().Feature.WriteDailyFiles {
-		f.saveDailyFiles(srcImg, imgData, mkt)
+	if allExist {
+		util.Logger.Debug("All image variants exist in storage, linking only", zap.String("imageName", imageName))
+		// 只建立关联信息
+		f.saveVariant(ctx, &dbImg, imageName, variantName, "jpg", nil)
+		for _, v := range targetVariants {
+			if v.name == variantName {
+				continue
+			}
+			f.saveVariant(ctx, &dbImg, imageName, v.name, "jpg", nil)
+		}
+	} else {
+		// 需要下载并处理
+		util.Logger.Debug("Downloading and processing image", zap.String("url", imgURL))
+		imgData, err := f.downloadImage(imgURL)
+		if err != nil {
+			util.Logger.Error("Failed to download image", zap.String("url", imgURL), zap.Error(err))
+			return err
+		}
+
+		srcImg, _, err := image.Decode(bytes.NewReader(imgData))
+		if err != nil {
+			util.Logger.Error("Failed to decode image data", zap.Error(err))
+			return err
+		}
+
+		// 保存原图
+		if err := f.saveVariant(ctx, &dbImg, imageName, variantName, "jpg", imgData); err != nil {
+			util.Logger.Error("Failed to save original variant", zap.String("variant", variantName), zap.Error(err))
+		}
+
+		for _, v := range targetVariants {
+			if v.name == variantName {
+				continue
+			}
+			resized := imaging.Fill(srcImg, v.width, v.height, imaging.Center, imaging.Lanczos)
+			buf := new(bytes.Buffer)
+			if err := jpeg.Encode(buf, resized, &jpeg.Options{Quality: 100}); err != nil {
+				util.Logger.Warn("Failed to encode jpeg", zap.String("variant", v.name), zap.Error(err))
+				continue
+			}
+			currentImgData := buf.Bytes()
+			if err := f.saveVariant(ctx, &dbImg, imageName, v.name, "jpg", currentImgData); err != nil {
+				util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
+			}
+		}
+
+		// 保存今日额外文件
+		today := time.Now().Format("2006-01-02")
+		if dateStr == today && config.GetConfig().Feature.WriteDailyFiles {
+			f.saveDailyFiles(srcImg, imgData, mkt)
+		}
 	}
 
 	return nil
+}
+
+func (f *Fetcher) extractImageName(urlBase, hsh string) string {
+	// 示例: /th?id=OHR.MilwaukeeHall_ROW0871854348
+	start := 0
+	if idx := strings.Index(urlBase, "OHR."); idx != -1 {
+		start = idx + 4
+	} else if idx := strings.Index(urlBase, "id="); idx != -1 {
+		start = idx + 3
+	}
+
+	rem := urlBase[start:]
+	end := strings.Index(rem, "_")
+	if end == -1 {
+		end = len(rem)
+	}
+
+	name := rem[:end]
+	if name == "" {
+		return hsh
+	}
+	return name
 }
 
 func (f *Fetcher) probeUHD(urlBase string) (string, string) {
@@ -249,25 +302,52 @@ func (f *Fetcher) downloadImage(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, variant, format string, data []byte) error {
-	key := fmt.Sprintf("%s/%s/%s_%s.%s", img.Mkt, img.Date, img.Date, variant, format)
+func (f *Fetcher) generateKey(imageName, variant, format string) string {
+	return fmt.Sprintf("%s/%s_%s.%s", imageName, imageName, variant, format)
+}
+
+func (f *Fetcher) saveVariant(ctx context.Context, img *model.Image, imageName, variant, format string, data []byte) error {
+	key := f.generateKey(imageName, variant, format)
 	contentType := "image/jpeg"
 	if format == "webp" {
 		contentType = "image/webp"
 	}
 
-	stored, err := storage.GlobalStorage.Put(ctx, key, bytes.NewReader(data), contentType)
-	if err != nil {
-		return err
+	var size int64
+	var publicURL string
+
+	exists, _ := storage.GlobalStorage.Exists(ctx, key)
+	if exists {
+		util.Logger.Debug("Variant already exists in storage, linking", zap.String("key", key))
+		// 如果存在，我们需要获取它的大小和公共 URL (如果可能)
+		// 但目前的 Storage 接口没有 Stat，我们可以尝试 Get 或者干脆 size 为 0
+		// 为了简单，我们只从存储中获取公共 URL
+		if pURL, ok := storage.GlobalStorage.PublicURL(key); ok {
+			publicURL = pURL
+		}
+		// size 暂时设为 0 或者从 data 中取 (如果有的话)
+		if data != nil {
+			size = int64(len(data))
+		}
+	} else if data != nil {
+		util.Logger.Debug("Saving variant to storage", zap.String("key", key))
+		stored, err := storage.GlobalStorage.Put(ctx, key, bytes.NewReader(data), contentType)
+		if err != nil {
+			return err
+		}
+		publicURL = stored.PublicURL
+		size = stored.Size
+	} else {
+		return fmt.Errorf("variant %s does not exist and no data provided", key)
 	}
 
 	vRecord := model.ImageVariant{
 		ImageID:    img.ID,
 		Variant:    variant,
 		Format:     format,
-		StorageKey: stored.Key,
-		PublicURL:  stored.PublicURL,
-		Size:       int64(len(data)),
+		StorageKey: key,
+		PublicURL:  publicURL,
+		Size:       size,
 	}
 
 	return repo.DB.Clauses(clause.OnConflict{
