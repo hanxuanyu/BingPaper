@@ -94,13 +94,15 @@ func (f *Fetcher) FetchRegion(ctx context.Context, mkt string) error {
 
 func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) error {
 	url := fmt.Sprintf("%s?format=js&idx=%d&n=%d&uhd=1&mkt=%s", config.BingAPIBase, idx, n, mkt)
-	util.Logger.Debug("Requesting Bing API", zap.String("url", url))
+	util.Logger.Info("Requesting Bing API", zap.String("url", url))
 	resp, err := f.httpClient.Get(url)
 	if err != nil {
 		util.Logger.Error("Failed to request Bing API", zap.Error(err))
 		return err
 	}
 	defer resp.Body.Close()
+
+	util.Logger.Info("Received response from Bing API", zap.String("mkt", mkt), zap.Int("status", resp.StatusCode))
 
 	var bingResp BingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&bingResp); err != nil {
@@ -111,6 +113,12 @@ func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) er
 	util.Logger.Info("Fetched images from Bing", zap.String("mkt", mkt), zap.Int("count", len(bingResp.Images)))
 
 	for _, bingImg := range bingResp.Images {
+		util.Logger.Info("Bing image metadata",
+			zap.String("mkt", mkt),
+			zap.String("date", bingImg.Enddate),
+			zap.String("title", bingImg.Title),
+			zap.String("hsh", bingImg.HSH))
+
 		if err := f.processImage(ctx, bingImg, mkt); err != nil {
 			util.Logger.Error("Failed to process image", zap.String("date", bingImg.Enddate), zap.String("mkt", mkt), zap.Error(err))
 		}
@@ -125,7 +133,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 	// 1. 地区关联幂等检查
 	var existingRegion model.ImageRegion
 	if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existingRegion).Error; err == nil {
-		util.Logger.Debug("ImageRegion record already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt))
+		util.Logger.Info("ImageRegion record already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("title", bingImg.Title))
 		return nil
 	}
 
@@ -221,6 +229,11 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		util.Logger.Error("Failed to create region record", zap.Error(err))
 		return err
 	}
+
+	util.Logger.Info("Successfully saved/updated ImageRegion record to database",
+		zap.String("date", dateStr),
+		zap.String("mkt", mkt),
+		zap.String("title", regionRecord.Title))
 
 	// 4. 保存今日额外文件
 	today := time.Now().Format("2006-01-02")
@@ -320,10 +333,20 @@ func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format st
 		Size:       size,
 	}
 
-	return repo.DB.Clauses(clause.OnConflict{
+	err := repo.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "image_name"}, {Name: "variant"}, {Name: "format"}},
 		DoNothing: true,
 	}).Create(&vRecord).Error
+	if err != nil {
+		return err
+	}
+
+	util.Logger.Info("Successfully saved ImageVariant record to database",
+		zap.String("image_name", imageName),
+		zap.String("variant", variant),
+		zap.String("format", format))
+
+	return nil
 }
 
 func (f *Fetcher) saveDailyFiles(srcImg image.Image, originalData []byte, mkt string) {
