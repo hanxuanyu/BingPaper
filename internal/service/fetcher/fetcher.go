@@ -93,9 +93,21 @@ func (f *Fetcher) FetchRegion(ctx context.Context, mkt string) error {
 }
 
 func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) error {
-	url := fmt.Sprintf("%s?format=js&idx=%d&n=%d&uhd=1&mkt=%s", config.BingAPIBase, idx, n, mkt)
+	lang := strings.Split(mkt, "-")[0]
+	url := fmt.Sprintf("%s?format=js&idx=%d&n=%d&uhd=1&mkt=%s&setlang=%s", config.BingAPIBase, idx, n, mkt, lang)
 	util.Logger.Info("Requesting Bing API", zap.String("url", url))
-	resp, err := f.httpClient.Get(url)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		util.Logger.Error("Failed to create Bing API request", zap.Error(err))
+		return err
+	}
+
+	// 添加请求头以增强地区/语言识别
+	req.Header.Set("Accept-Language", fmt.Sprintf("%s,%s;q=0.9", mkt, lang))
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := f.httpClient.Do(req)
 	if err != nil {
 		util.Logger.Error("Failed to request Bing API", zap.Error(err))
 		return err
@@ -140,7 +152,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 	imageName := f.extractImageName(bingImg.URLBase, bingImg.HSH)
 
 	// 2. 处理变体
-	imgURL, variantName := f.probeUHD(bingImg.URLBase)
+	imgURL, variantName := f.probeUHD(ctx, bingImg.URLBase)
 	targetVariants := []struct {
 		name   string
 		width  int
@@ -173,7 +185,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 	} else {
 		util.Logger.Debug("Downloading and processing image", zap.String("url", imgURL), zap.String("imageName", imageName))
 		var err error
-		imgData, err = f.downloadImage(imgURL)
+		imgData, err = f.downloadImage(ctx, imgURL)
 		if err != nil {
 			util.Logger.Error("Failed to download image", zap.String("url", imgURL), zap.Error(err))
 			return err
@@ -268,17 +280,29 @@ func (f *Fetcher) extractImageName(urlBase, hsh string) string {
 	return name
 }
 
-func (f *Fetcher) probeUHD(urlBase string) (string, string) {
+func (f *Fetcher) probeUHD(ctx context.Context, urlBase string) (string, string) {
 	uhdURL := fmt.Sprintf("https://www.bing.com%s_UHD.jpg", urlBase)
-	resp, err := f.httpClient.Head(uhdURL)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", uhdURL, nil)
+	if err != nil {
+		return fmt.Sprintf("https://www.bing.com%s_1920x1080.jpg", urlBase), "1920x1080"
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := f.httpClient.Do(req)
 	if err == nil && resp.StatusCode == http.StatusOK {
 		return uhdURL, "UHD"
 	}
 	return fmt.Sprintf("https://www.bing.com%s_1920x1080.jpg", urlBase), "1920x1080"
 }
 
-func (f *Fetcher) downloadImage(url string) ([]byte, error) {
-	resp, err := f.httpClient.Get(url)
+func (f *Fetcher) downloadImage(ctx context.Context, url string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := f.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
