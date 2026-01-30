@@ -47,9 +47,21 @@ type Fetcher struct {
 }
 
 func NewFetcher() *Fetcher {
+	// 使用 DefaultTransport 的副本并显式设置代理
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyFromEnvironment
+
+	// 检查是否有代理
+	dummyReq, _ := http.NewRequest("GET", "https://www.bing.com", nil)
+	proxyURL, err := transport.Proxy(dummyReq)
+	if err == nil && proxyURL != nil {
+		util.Logger.Info("HTTP proxy detected from environment", zap.String("proxy", proxyURL.String()))
+	}
+
 	return &Fetcher{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 	}
 }
