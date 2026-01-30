@@ -164,7 +164,7 @@ func Init(configPath string) error {
 	v.SetDefault("log.log_console", true)
 	v.SetDefault("log.show_db_log", false)
 	v.SetDefault("log.db_log_level", "info")
-	v.SetDefault("api.mode", "local")
+	v.SetDefault("api.mode", "redirect")
 	v.SetDefault("api.enable_mkt_fallback", true)
 	v.SetDefault("cron.enabled", true)
 	v.SetDefault("cron.daily_spec", "20 8-23/4 * * *")
