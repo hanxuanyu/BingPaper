@@ -178,14 +178,14 @@
             
             <!-- 悬浮信息层 -->
             <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
-              <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 transform md:translate-y-4 md:group-hover:translate-y-0 transition-transform duration-300">
-                <div class="text-xs text-white/70 mb-1">
+              <div class="absolute bottom-0 left-0 right-0 p-3 md:p-4 transform md:translate-y-4 md:group-hover:translate-y-0 transition-transform duration-300">
+                <div class="text-[10px] md:text-xs text-white/70 mb-0.5">
                   {{ formatDate(image.date) }}
                 </div>
-                <h3 class="text-base md:text-lg font-semibold text-white mb-1 md:mb-2 line-clamp-2">
+                <h3 class="text-sm md:text-base font-semibold text-white mb-1 line-clamp-2">
                   {{ image.title || '未命名' }}
                 </h3>
-                <p v-if="image.copyright" class="text-xs md:text-sm text-white/80 line-clamp-2">
+                <p v-if="image.copyright" class="text-[10px] md:text-xs text-white/80 line-clamp-2">
                   {{ image.copyright }}
                 </p>
               </div>
