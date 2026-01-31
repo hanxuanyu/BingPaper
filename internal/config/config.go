@@ -169,7 +169,7 @@ func Init(configPath string) error {
 	v.SetDefault("api.enable_mkt_fallback", false)
 	v.SetDefault("api.enable_on_demand_fetch", false)
 	v.SetDefault("cron.enabled", true)
-	v.SetDefault("cron.daily_spec", "20 8-23/4 * * *")
+	v.SetDefault("cron.daily_spec", "10 */2 * * *")
 	v.SetDefault("retention.days", 0)
 	v.SetDefault("db.type", "sqlite")
 	v.SetDefault("db.dsn", "data/bing_paper.db")

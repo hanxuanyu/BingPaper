@@ -18,7 +18,7 @@ api:
   enable_on_demand_fetch: false
 cron:
   enabled: true
-  daily_spec: 20 8-23/4 * * *
+  daily_spec: 10 */2 * * *
 retention:
   days: 0
 db:
