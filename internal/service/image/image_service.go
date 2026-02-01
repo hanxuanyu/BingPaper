@@ -66,17 +66,17 @@ func CleanupOldImages(ctx context.Context) error {
 }
 
 func GetTodayImage(mkt string) (*model.ImageRegion, error) {
+	if mkt == "" {
+		mkt = config.GetConfig().GetDefaultRegion()
+	}
 	today := time.Now().Format("2006-01-02")
 	util.Logger.Debug("Getting today image", zap.String("mkt", mkt), zap.String("today", today))
 	var imgRegion model.ImageRegion
-	tx := repo.DB.Where("date = ?", today)
-	if mkt != "" {
-		tx = tx.Where("mkt = ?", mkt)
-	}
+	tx := repo.DB.Where("date = ? AND mkt = ?", today, mkt)
 	err := tx.Preload("Variants", func(db *gorm.DB) *gorm.DB {
 		return db.Order("size asc")
 	}).First(&imgRegion).Error
-	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+	if err != nil && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
 		// 如果没找到，尝试异步按需抓取该地区
 		util.Logger.Info("Image not found in DB, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
@@ -89,23 +89,18 @@ func GetTodayImage(mkt string) (*model.ImageRegion, error) {
 	if err != nil {
 		util.Logger.Debug("Today image not found, trying latest image", zap.String("mkt", mkt))
 		// 如果今天还是没有，尝试获取最近的一张
-		tx = repo.DB.Order("date desc")
-		if mkt != "" {
-			tx = tx.Where("mkt = ?", mkt)
-		}
-		err = tx.Preload("Variants", func(db *gorm.DB) *gorm.DB {
+		err = repo.DB.Where("mkt = ?", mkt).Order("date desc").Preload("Variants", func(db *gorm.DB) *gorm.DB {
 			return db.Order("size asc")
 		}).First(&imgRegion).Error
 	}
 
 	// 兜底逻辑
-	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {
+	if err != nil && config.GetConfig().API.EnableMktFallback {
 		defaultMkt := config.GetConfig().GetDefaultRegion()
 		util.Logger.Debug("Image not found, trying fallback to default region", zap.String("mkt", mkt), zap.String("defaultMkt", defaultMkt))
 		if mkt != defaultMkt {
 			return GetTodayImage(defaultMkt)
 		}
-		return GetTodayImage("")
 	}
 
 	if err == nil {
@@ -127,19 +122,36 @@ func GetAllRegionsTodayImages() ([]model.ImageRegion, error) {
 			return db.Order("size asc")
 		}).Find(&images).Error
 
-	return images, err
+	if err != nil {
+		return nil, err
+	}
+
+	// 按照配置的 regions 顺序排序
+	mktMap := make(map[string]model.ImageRegion)
+	for _, img := range images {
+		mktMap[img.Mkt] = img
+	}
+
+	var sortedImages []model.ImageRegion
+	for _, r := range regions {
+		if img, ok := mktMap[r]; ok {
+			sortedImages = append(sortedImages, img)
+		}
+	}
+
+	return sortedImages, nil
 }
 
 func GetRandomImage(mkt string) (*model.ImageRegion, error) {
+	if mkt == "" {
+		mkt = config.GetConfig().GetDefaultRegion()
+	}
 	util.Logger.Debug("Getting random image", zap.String("mkt", mkt))
 	var imgRegion model.ImageRegion
 	var count int64
-	tx := repo.DB.Model(&model.ImageRegion{})
-	if mkt != "" {
-		tx = tx.Where("mkt = ?", mkt)
-	}
+	tx := repo.DB.Model(&model.ImageRegion{}).Where("mkt = ?", mkt)
 	tx.Count(&count)
-	if count == 0 && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+	if count == 0 && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
 		util.Logger.Info("No images found in DB for region, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
 		go func() {
@@ -158,13 +170,12 @@ func GetRandomImage(mkt string) (*model.ImageRegion, error) {
 		return db.Order("size asc")
 	}).Offset(offset).Limit(1).Find(&imgRegion).Error
 
-	if (err != nil || imgRegion.ID == 0) && mkt != "" && config.GetConfig().API.EnableMktFallback {
+	if (err != nil || imgRegion.ID == 0) && config.GetConfig().API.EnableMktFallback {
 		defaultMkt := config.GetConfig().GetDefaultRegion()
 		util.Logger.Debug("Random image not found, trying fallback", zap.String("mkt", mkt), zap.String("defaultMkt", defaultMkt))
 		if mkt != defaultMkt {
 			return GetRandomImage(defaultMkt)
 		}
-		return GetRandomImage("")
 	}
 
 	if err == nil && imgRegion.ID == 0 {
@@ -175,16 +186,15 @@ func GetRandomImage(mkt string) (*model.ImageRegion, error) {
 }
 
 func GetImageByDate(date string, mkt string) (*model.ImageRegion, error) {
+	if mkt == "" {
+		mkt = config.GetConfig().GetDefaultRegion()
+	}
 	util.Logger.Debug("Getting image by date", zap.String("date", date), zap.String("mkt", mkt))
 	var imgRegion model.ImageRegion
-	tx := repo.DB.Where("date = ?", date)
-	if mkt != "" {
-		tx = tx.Where("mkt = ?", mkt)
-	}
-	err := tx.Preload("Variants", func(db *gorm.DB) *gorm.DB {
+	err := repo.DB.Where("date = ? AND mkt = ?", date, mkt).Preload("Variants", func(db *gorm.DB) *gorm.DB {
 		return db.Order("size asc")
 	}).First(&imgRegion).Error
-	if err != nil && mkt != "" && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
+	if err != nil && config.GetConfig().API.EnableOnDemandFetch && util.IsValidRegion(mkt) {
 		util.Logger.Info("Image not found in DB for date, starting asynchronous on-demand fetch", zap.String("mkt", mkt), zap.String("date", date))
 		f := fetcher.NewFetcher()
 		go func() {
@@ -193,26 +203,25 @@ func GetImageByDate(date string, mkt string) (*model.ImageRegion, error) {
 		return nil, ErrFetchStarted
 	}
 
-	if err != nil && mkt != "" && config.GetConfig().API.EnableMktFallback {
+	if err != nil && config.GetConfig().API.EnableMktFallback {
 		defaultMkt := config.GetConfig().GetDefaultRegion()
 		if mkt != defaultMkt {
 			return GetImageByDate(date, defaultMkt)
 		}
-		return GetImageByDate(date, "")
 	}
 
 	return &imgRegion, err
 }
 
 func GetImageList(limit int, offset int, month string, mkt string) ([]model.ImageRegion, error) {
+	if mkt == "" {
+		mkt = config.GetConfig().GetDefaultRegion()
+	}
 	var images []model.ImageRegion
-	tx := repo.DB.Model(&model.ImageRegion{})
+	tx := repo.DB.Model(&model.ImageRegion{}).Where("mkt = ?", mkt)
 
 	if month != "" {
 		tx = tx.Where("date LIKE ?", month+"%")
-	}
-	if mkt != "" {
-		tx = tx.Where("mkt = ?", mkt)
 	}
 
 	tx = tx.Order("date desc").Preload("Variants", func(db *gorm.DB) *gorm.DB {
