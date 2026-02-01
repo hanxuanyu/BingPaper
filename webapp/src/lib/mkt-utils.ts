@@ -14,15 +14,13 @@ export const DEFAULT_REGIONS = [
   { value: 'de-DE', label: '德国' },
   { value: 'en-NZ', label: '新西兰' },
   { value: 'en-CA', label: '加拿大' },
+  { value: 'en-IN', label: '印度' },
   { value: 'fr-FR', label: '法国' },
+  { value: 'fr-CA', label: '加拿大 (法语)' },
   { value: 'it-IT', label: '意大利' },
   { value: 'es-ES', label: '西班牙' },
   { value: 'pt-BR', label: '巴西' },
-  { value: 'ko-KR', label: '韩国' },
-  { value: 'en-IN', label: '印度' },
-  { value: 'ru-RU', label: '俄罗斯' },
-  { value: 'zh-HK', label: '中国香港' },
-  { value: 'zh-TW', label: '中国台湾' },
+  { value: 'en-ROW', label: '全球' },
 ]
 
 /**

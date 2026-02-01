@@ -59,10 +59,10 @@ fetcher:
     - de-DE
     - en-NZ
     - en-CA
+    - en-IN
     - fr-FR
+    - fr-CA
     - it-IT
     - es-ES
     - pt-BR
-    - ko-KR
-    - en-IN
-    - ru-RU
+    - en-ROW

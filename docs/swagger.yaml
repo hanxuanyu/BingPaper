@@ -525,7 +525,8 @@ paths:
         name: date
         required: true
         type: string
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -570,7 +571,8 @@ paths:
         name: date
         required: true
         type: string
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -600,7 +602,8 @@ paths:
     get:
       description: 随机返回一张已抓取的图片流或重定向
       parameters:
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -640,7 +643,8 @@ paths:
     get:
       description: 随机获取一张已抓取图片的元数据
       parameters:
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -670,7 +674,8 @@ paths:
     get:
       description: 根据参数返回今日必应图片流或重定向
       parameters:
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -711,7 +716,8 @@ paths:
     get:
       description: 获取今日必应图片的标题、版权等元数据
       parameters:
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string
@@ -759,7 +765,8 @@ paths:
         in: query
         name: month
         type: string
-      - description: 地区编码 (如 zh-CN, en-US)
+      - description: 地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA,
+          en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)
         in: query
         name: mkt
         type: string

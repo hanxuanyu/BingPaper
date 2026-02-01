@@ -43,7 +43,7 @@ type ImageMetaResp struct {
 // @Summary 获取今日图片
 // @Description 根据参数返回今日必应图片流或重定向
 // @Tags image
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Param variant query string false "分辨率 (UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240)" default(UHD)
 // @Param format query string false "格式 (jpg)" default(jpg)
 // @Produce image/jpeg
@@ -69,7 +69,7 @@ func GetToday(c *gin.Context) {
 // @Summary 获取今日图片元数据
 // @Description 获取今日必应图片的标题、版权等元数据
 // @Tags image
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Success 202 {object} map[string]string "按需抓取任务已启动"
@@ -94,7 +94,7 @@ func GetTodayMeta(c *gin.Context) {
 // @Summary 获取随机图片
 // @Description 随机返回一张已抓取的图片流或重定向
 // @Tags image
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
@@ -121,7 +121,7 @@ func GetRandom(c *gin.Context) {
 // @Summary 获取随机图片元数据
 // @Description 随机获取一张已抓取图片的元数据
 // @Tags image
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Success 202 {object} map[string]string "按需抓取任务已启动"
@@ -147,7 +147,7 @@ func GetRandomMeta(c *gin.Context) {
 // @Description 根据日期返回图片流或重定向 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Param variant query string false "分辨率" default(UHD)
 // @Param format query string false "格式" default(jpg)
 // @Produce image/jpeg
@@ -175,7 +175,7 @@ func GetByDate(c *gin.Context) {
 // @Description 根据日期获取图片元数据 (yyyy-mm-dd)
 // @Tags image
 // @Param date path string true "日期 (yyyy-mm-dd)"
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Produce json
 // @Success 200 {object} ImageMetaResp
 // @Success 202 {object} map[string]string "按需抓取任务已启动"
@@ -205,7 +205,7 @@ func GetByDateMeta(c *gin.Context) {
 // @Param page query int false "页码 (从1开始)"
 // @Param page_size query int false "每页数量"
 // @Param month query string false "按月份过滤 (格式: YYYY-MM)"
-// @Param mkt query string false "地区编码 (如 zh-CN, en-US)"
+// @Param mkt query string false "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)"
 // @Produce json
 // @Success 200 {array} ImageMetaResp
 // @Router /images [get]

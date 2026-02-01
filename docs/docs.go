@@ -415,7 +415,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     },
@@ -482,7 +482,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     }
@@ -528,7 +528,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     },
@@ -588,7 +588,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     }
@@ -634,7 +634,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     },
@@ -694,7 +694,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     }
@@ -765,7 +765,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "地区编码 (如 zh-CN, en-US)",
+                        "description": "地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)",
                         "name": "mkt",
                         "in": "query"
                     }

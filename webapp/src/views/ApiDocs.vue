@@ -96,7 +96,7 @@
                   <code class="text-yellow-400 min-w-24">variant</code>
                   <div class="flex-1">
                     <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
-                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1200, 1920x1080, 1080x1920, 1366x768, 1280x768, 1024x768, 800x600, 800x480, 768x1280, 720x1280, 640x480, 480x800, 400x240, 320x240, 240x320</span>
                   </div>
                 </div>
                 <div class="flex gap-4 text-sm">
@@ -105,7 +105,7 @@
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">mkt</code>
-                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)，默认由服务器自动探测</span>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)，默认由服务器自动探测</span>
                 </div>
               </div>
             </div>
@@ -179,7 +179,7 @@
                   <code class="text-yellow-400 min-w-24">variant</code>
                   <div class="flex-1">
                     <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
-                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1200, 1920x1080, 1080x1920, 1366x768, 1280x768, 1024x768, 800x600, 800x480, 768x1280, 720x1280, 640x480, 480x800, 400x240, 320x240, 240x320</span>
                   </div>
                 </div>
                 <div class="flex gap-4 text-sm">
@@ -188,7 +188,7 @@
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">mkt</code>
-                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)</span>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)</span>
                 </div>
               </div>
             </div>
@@ -255,7 +255,7 @@
                   <code class="text-yellow-400 min-w-24">variant</code>
                   <div class="flex-1">
                     <span class="text-white/50 block mb-1">分辨率 (默认: UHD)</span>
-                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1080, 1366x768, 1280x720, 1024x768, 800x600, 800x480, 640x480, 640x360, 480x360, 400x240, 320x240</span>
+                    <span class="text-white/40 text-xs">可选值: UHD, 1920x1200, 1920x1080, 1080x1920, 1366x768, 1280x768, 1024x768, 800x600, 800x480, 768x1280, 720x1280, 640x480, 480x800, 400x240, 320x240, 240x320</span>
                   </div>
                 </div>
                 <div class="flex gap-4 text-sm">
@@ -264,7 +264,7 @@
                 </div>
                 <div class="flex gap-4 text-sm">
                   <code class="text-yellow-400 min-w-24">mkt</code>
-                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP)</span>
+                  <span class="text-white/50">地区编码 (如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)</span>
                 </div>
               </div>
             </div>
@@ -348,7 +348,7 @@
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">mkt</code>
-                <span class="text-white/60">地区编码（如 zh-CN, en-US）</span>
+                <span class="text-white/60">地区编码（如 zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW）</span>
               </div>
               <div class="flex gap-4">
                 <code class="text-yellow-400 min-w-32">title</code>

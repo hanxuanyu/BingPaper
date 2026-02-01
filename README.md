@@ -57,7 +57,7 @@ go run .
 - `GET /api/v1/image/random`：返回随机图片
 - `GET /api/v1/image/date/:yyyy-mm-dd`：返回指定日期图片
 - **查询参数**：
-  - `mkt`：地区编码 (zh-CN, en-US, ja-JP 等)，默认 `zh-CN`
+  - `mkt`：地区编码 (zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)，默认 `zh-CN`
   - `variant`：分辨率 (UHD, 1920x1080, 1366x768)，默认 `UHD`
   - `format`：格式 (jpg)，默认 `jpg`
 

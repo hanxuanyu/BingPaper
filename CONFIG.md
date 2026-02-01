@@ -43,7 +43,7 @@ BingPaper 支持通过配置文件（YAML）和环境变量进行配置。
 - `daily_spec`: Cron 表达式，定义每日抓取时间。默认 `"0 10 * * *"` (每日上午 10:00)。
 
 #### fetcher (抓取配置)
-- `regions`: 需要抓取的地区编码列表（如 `zh-CN`, `en-US` 等）。如果不设置，默认为包括主要国家在内的 17 个地区。
+- `regions`: 需要抓取的地区编码列表（如 `zh-CN`, `en-US` 等）。如果不设置，默认为 15 个地区 (zh-CN, en-US, ja-JP, en-AU, en-GB, de-DE, en-NZ, en-CA, en-IN, fr-FR, fr-CA, it-IT, es-ES, pt-BR, en-ROW)。
 
 #### retention (数据保留)
 - `days`: 图片及元数据保留天数。超过此天数的数据可能会被清理任务处理。设置为 `0` 表示永久保留，不进行自动清理。默认 `0`。
