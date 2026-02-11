@@ -12,7 +12,9 @@ import type {
   ImageListParams,
   ManualFetchRequest,
   ImageVariant,
-  ImageFormat
+  ImageFormat,
+  LayoutResponse,
+  UpdateLayoutRequest
 } from './api-types'
 
 /**
@@ -96,6 +98,29 @@ export class BingPaperApiService {
    */
   async manualCleanup(): Promise<{ message: string }> {
     return apiClient.post('/admin/cleanup')
+  }
+
+  // ===== 布局管理 =====
+
+  /**
+   * 获取布局内容 (公开)
+   */
+  async getLayout(): Promise<LayoutResponse> {
+    return apiClient.get<LayoutResponse>('/layout')
+  }
+
+  /**
+   * 获取布局内容 (管理，带认证)
+   */
+  async getAdminLayout(): Promise<LayoutResponse> {
+    return apiClient.get<LayoutResponse>('/admin/layout')
+  }
+
+  /**
+   * 更新布局内容
+   */
+  async updateLayout(request: UpdateLayoutRequest): Promise<{ message: string }> {
+    return apiClient.put('/admin/layout', request)
   }
 
   // ===== 图片相关 =====
@@ -227,6 +252,9 @@ export const {
   getTodayImageUrl,
   getImageUrlByDate,
   getRandomImageUrl,
+  getLayout,
+  getAdminLayout,
+  updateLayout,
   setAuthToken,
   clearAuthToken
 } = bingPaperApi

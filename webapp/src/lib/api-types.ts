@@ -193,6 +193,18 @@ export interface ManualFetchRequest {
   n?: number // 抓取天数
 }
 
+// ===== 布局相关 =====
+
+export interface LayoutResponse {
+  header: string
+  footer: string
+}
+
+export interface UpdateLayoutRequest {
+  header?: string
+  footer?: string
+}
+
 // ===== API 端点类型定义 =====
 
 export type ImageVariant = 'UHD' | '1920x1080' | '1366x768' | '1280x720' | '1024x768' | '800x600' | '800x480' | '640x480' | '640x360' | '480x360' | '400x240' | '320x240'

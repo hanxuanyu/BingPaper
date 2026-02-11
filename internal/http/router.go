@@ -49,6 +49,7 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 		api.GET("/images", handlers.ListImages)
 		api.GET("/images/global/today", handlers.ListGlobalTodayImages)
 		api.GET("/regions", handlers.GetRegions)
+		api.GET("/layout", handlers.GetLayout)
 
 		// 管理接口
 		admin := api.Group("/admin")
@@ -71,6 +72,9 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 
 				authorized.POST("/fetch", handlers.ManualFetch)
 				authorized.POST("/cleanup", handlers.ManualCleanup)
+
+				authorized.GET("/layout", handlers.GetLayout)
+				authorized.PUT("/layout", handlers.UpdateLayout)
 			}
 		}
 	}
