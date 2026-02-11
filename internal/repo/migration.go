@@ -29,7 +29,7 @@ func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
 	}
 
 	// 2. 自动迁移结构
-	if err := newDB.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}); err != nil {
+	if err := newDB.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}, &model.ApiStat{}); err != nil {
 		return fmt.Errorf("failed to migrate schema in new DB: %w", err)
 	}
 
@@ -43,6 +43,9 @@ func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
 	}
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Token{}).Error; err != nil {
 		return fmt.Errorf("failed to clear Tokens: %w", err)
+	}
+	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ApiStat{}).Error; err != nil {
+		return fmt.Errorf("failed to clear ApiStats: %w", err)
 	}
 
 	// 4. 开始迁移数据
@@ -83,6 +86,10 @@ func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
 				return fmt.Errorf("failed to insert tokens into new DB: %w", err)
 			}
 		}
+
+		// 迁移 ApiStats (由于结构变更，这里简单跳过或者你可以选择进行聚合迁移)
+		// 鉴于需求是不再记录详细信息，旧的详细记录不直接兼容新的聚合表结构
+		util.Logger.Info("Skipping ApiStats migration due to schema change (from detailed to aggregated)")
 
 		// 更新全局 DB 指针
 		DB = newDB

@@ -425,6 +425,86 @@ paths:
       summary: 修改管理员密码
       tags:
       - admin
+  /admin/stats/endpoints:
+    get:
+      description: 获取各接口的调用量分布
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: 获取接口分布
+      tags:
+      - admin
+  /admin/stats/regions:
+    get:
+      description: 获取各地区的调用量分布
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: 获取地区分布
+      tags:
+      - admin
+  /admin/stats/summary:
+    get:
+      description: 获取总调用量、今日调用量、昨日调用量
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取统计概览
+      tags:
+      - admin
+  /admin/stats/trend:
+    get:
+      description: 获取最近 N 天的每日调用量。支持按 endpoint 过滤。
+      parameters:
+      - default: 7
+        description: 天数
+        in: query
+        name: days
+        type: integer
+      - description: 接口路径
+        in: query
+        name: endpoint
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: 获取调用趋势
+      tags:
+      - admin
   /admin/tokens:
     get:
       description: 获取所有已创建的 API Token 列表

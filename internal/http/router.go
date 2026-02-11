@@ -38,6 +38,7 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 	{
 		// 公共接口
 		img := api.Group("/image")
+		img.Use(middleware.StatMiddleware())
 		{
 			img.GET("/today", handlers.GetToday)
 			img.GET("/today/meta", handlers.GetTodayMeta)
@@ -46,9 +47,10 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 			img.GET("/date/:date", handlers.GetByDate)
 			img.GET("/date/:date/meta", handlers.GetByDateMeta)
 		}
-		api.GET("/images", handlers.ListImages)
-		api.GET("/images/global/today", handlers.ListGlobalTodayImages)
+		api.GET("/images", middleware.StatMiddleware(), handlers.ListImages)
+		api.GET("/images/global/today", middleware.StatMiddleware(), handlers.ListGlobalTodayImages)
 		api.GET("/regions", handlers.GetRegions)
+		api.GET("/layout", handlers.GetLayout)
 
 		// 管理接口
 		admin := api.Group("/admin")
@@ -71,6 +73,15 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 
 				authorized.POST("/fetch", handlers.ManualFetch)
 				authorized.POST("/cleanup", handlers.ManualCleanup)
+
+				authorized.GET("/layout", handlers.GetLayout)
+				authorized.PUT("/layout", handlers.UpdateLayout)
+
+				// 统计接口
+				authorized.GET("/stats/summary", handlers.GetStatSummary)
+				authorized.GET("/stats/trend", handlers.GetStatTrend)
+				authorized.GET("/stats/endpoints", handlers.GetStatEndpoints)
+				authorized.GET("/stats/regions", handlers.GetStatRegions)
 			}
 		}
 	}

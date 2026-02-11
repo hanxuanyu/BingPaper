@@ -12,7 +12,13 @@ import type {
   ImageListParams,
   ManualFetchRequest,
   ImageVariant,
-  ImageFormat
+  ImageFormat,
+  LayoutResponse,
+  UpdateLayoutRequest,
+  StatSummary,
+  StatTrendItem,
+  StatEndpointItem,
+  StatRegionItem
 } from './api-types'
 
 /**
@@ -96,6 +102,62 @@ export class BingPaperApiService {
    */
   async manualCleanup(): Promise<{ message: string }> {
     return apiClient.post('/admin/cleanup')
+  }
+
+  // ===== 布局管理 =====
+
+  /**
+   * 获取布局内容 (公开)
+   */
+  async getLayout(): Promise<LayoutResponse> {
+    return apiClient.get<LayoutResponse>('/layout')
+  }
+
+  /**
+   * 获取布局内容 (管理，带认证)
+   */
+  async getAdminLayout(): Promise<LayoutResponse> {
+    return apiClient.get<LayoutResponse>('/admin/layout')
+  }
+
+  /**
+   * 更新布局内容
+   */
+  async updateLayout(request: UpdateLayoutRequest): Promise<{ message: string }> {
+    return apiClient.put('/admin/layout', request)
+  }
+
+  // ===== 统计相关 =====
+
+  /**
+   * 获取统计概览
+   */
+  async getStatSummary(): Promise<StatSummary> {
+    return apiClient.get<StatSummary>('/admin/stats/summary')
+  }
+
+  /**
+   * 获取调用趋势
+   */
+  async getStatTrend(days: number = 7, endpoint?: string): Promise<StatTrendItem[]> {
+    const url = endpoint 
+      ? `/admin/stats/trend?days=${days}&endpoint=${encodeURIComponent(endpoint)}`
+      : `/admin/stats/trend?days=${days}`
+    return apiClient.get<StatTrendItem[]>(url)
+  }
+
+  /**
+   * 获取接口分布
+   */
+  async getStatEndpoints(): Promise<StatEndpointItem[]> {
+    return apiClient.get<StatEndpointItem[]>('/admin/stats/endpoints')
+  }
+
+  /**
+   * 获取地区分布
+   */
+  async getStatRegions(): Promise<StatRegionItem[]> {
+    return apiClient.get<StatRegionItem[]>('/admin/stats/regions')
   }
 
   // ===== 图片相关 =====
@@ -227,6 +289,13 @@ export const {
   getTodayImageUrl,
   getImageUrlByDate,
   getRandomImageUrl,
+  getLayout,
+  getAdminLayout,
+  updateLayout,
+  getStatSummary,
+  getStatTrend,
+  getStatEndpoints,
+  getStatRegions,
   setAuthToken,
   clearAuthToken
 } = bingPaperApi

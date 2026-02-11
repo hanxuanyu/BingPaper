@@ -27,6 +27,7 @@ import (
 func Init(webFS embed.FS, configPath string) *gin.Engine {
 	// 0. 确保数据目录存在
 	_ = os.MkdirAll("data/picture", 0755)
+	_ = os.MkdirAll("data/layout", 0755)
 
 	// 1. 初始化配置
 	if err := config.Init(configPath); err != nil {

@@ -131,7 +131,7 @@ func InitDB() error {
 	// 但此处假设 DSN 中指定的数据库已经存在。AutoMigrate 会负责创建表。
 
 	// 迁移
-	if err := db.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}); err != nil {
+	if err := db.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}, &model.ApiStat{}); err != nil {
 		util.Logger.Error("Database migration failed", zap.Error(err))
 		return err
 	}
