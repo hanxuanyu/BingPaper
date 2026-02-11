@@ -405,20 +405,73 @@
             <CardTitle>抓取配置</CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div class="space-y-2">
+            <div class="space-y-3">
               <Label>抓取地区</Label>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                <div v-for="region in allRegions" :key="region.value" class="flex items-center space-x-2">
-                  <Checkbox 
-                    :id="'region-'+region.value" 
-                    :checked="config.Fetcher.Regions.includes(region.value)"
-                    @update:checked="(checked: any) => toggleRegion(region.value, !!checked)"
-                  />
-                  <Label :for="'region-'+region.value" class="text-sm font-normal cursor-pointer">{{ region.label }}</Label>
+              
+              <!-- 已选择的地区 (徽章显示) -->
+              <div v-if="config.Fetcher.Regions && config.Fetcher.Regions.length > 0" class="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
+                <Badge 
+                  v-for="regionValue in config.Fetcher.Regions" 
+                  :key="regionValue"
+                  variant="secondary"
+                  class="px-3 py-1.5 text-sm cursor-pointer hover:bg-red-100 hover:text-red-700 transition-colors group"
+                  @click="removeRegion(regionValue)"
+                >
+                  <span>{{ regionValue }}</span>
+                  <span class="ml-1.5 text-xs opacity-60 group-hover:opacity-100">✕</span>
+                </Badge>
+              </div>
+              <div v-else class="text-sm text-gray-500 p-3 bg-gray-50 rounded-md">
+                未选择任何地区，默认将抓取 zh-CN
+              </div>
+
+              <!-- 手动输入地区代码 -->
+              <div class="space-y-2">
+                <div class="flex gap-2 items-start">
+                  <div class="flex-1 space-y-1">
+                    <Input 
+                      v-model="regionInput"
+                      placeholder="输入地区代码，如: zh-CN, en-US, ja-JP"
+                      @keypress.enter="addRegionFromInput"
+                      :class="{ 'border-red-500': regionInputError }"
+                    />
+                    <p v-if="regionInputError" class="text-xs text-red-600">
+                      {{ regionInputError }}
+                    </p>
+                  </div>
+                  <Button 
+                    @click="addRegionFromInput" 
+                    :disabled="!regionInput.trim()"
+                    variant="outline"
+                  >
+                    添加
+                  </Button>
+                </div>
+                
+                <!-- 常用地区快速添加 -->
+                <div class="space-y-1.5">
+                  <p class="text-xs text-gray-600 font-medium">常用地区代码：</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <Badge
+                      v-for="region in commonRegions"
+                      :key="region.code"
+                      :variant="config.Fetcher.Regions?.includes(region.code) ? 'default' : 'outline'"
+                      class="cursor-pointer text-xs px-2 py-1"
+                      :class="{
+                        'opacity-50 cursor-not-allowed': config.Fetcher.Regions?.includes(region.code),
+                        'hover:bg-primary hover:text-primary-foreground': !config.Fetcher.Regions?.includes(region.code)
+                      }"
+                      @click="addCommonRegion(region.code)"
+                      :title="region.name"
+                    >
+                      {{ region.code }}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <p class="text-xs text-gray-500 mt-2">
-                勾选需要定期抓取壁纸的地区。如果不勾选任何地区，默认将只抓取 zh-CN。
+
+              <p class="text-xs text-gray-500">
+                输入 Bing 地区代码（格式：语言-地区，如 zh-CN）。点击上方常用代码可快速添加。点击徽章可移除地区。
               </p>
             </div>
           </CardContent>
@@ -466,7 +519,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { apiService } from '@/lib/api-service'
 import type { Config } from '@/lib/api-types'
@@ -477,8 +530,33 @@ const loadError = ref('')
 const saveLoading = ref(false)
 const dsnError = ref('')
 
-// 所有可选地区列表
-const allRegions = ref<any[]>([])
+// 地区输入相关
+const regionInput = ref('')
+const regionInputError = ref('')
+
+// 常用地区代码列表
+const commonRegions = [
+  { code: 'zh-CN', name: '中国大陆' },
+  { code: 'zh-TW', name: '台湾' },
+  { code: 'zh-HK', name: '香港' },
+  { code: 'en-US', name: '美国' },
+  { code: 'en-GB', name: '英国' },
+  { code: 'en-CA', name: '加拿大' },
+  { code: 'en-AU', name: '澳大利亚' },
+  { code: 'en-IN', name: '印度' },
+  { code: 'ja-JP', name: '日本' },
+  { code: 'ko-KR', name: '韩国' },
+  { code: 'de-DE', name: '德国' },
+  { code: 'fr-FR', name: '法国' },
+  { code: 'es-ES', name: '西班牙' },
+  { code: 'it-IT', name: '意大利' },
+  { code: 'pt-BR', name: '巴西' },
+  { code: 'ru-RU', name: '俄罗斯' },
+  { code: 'ar-SA', name: '沙特阿拉伯' },
+  { code: 'th-TH', name: '泰国' },
+  { code: 'vi-VN', name: '越南' },
+  { code: 'id-ID', name: '印度尼西亚' }
+]
 
 const config = ref<Config>({
   Admin: { PasswordBcrypt: '' },
@@ -527,28 +605,61 @@ const config = ref<Config>({
 const configJson = ref('')
 const jsonError = ref('')
 
-// 获取所有地区
-const fetchRegions = async () => {
-  try {
-    const data = await apiService.getRegions()
-    allRegions.value = data
-  } catch (err) {
-    console.error('获取地区列表失败:', err)
-  }
+// 验证地区代码格式 (语言-地区格式，如 zh-CN)
+const validateRegionCode = (code: string): boolean => {
+  // 基本格式验证：2-3个字母 + 连字符 + 2个字母，如 zh-CN, en-US
+  const pattern = /^[a-z]{2,3}-[A-Z]{2}$/
+  return pattern.test(code)
 }
 
-const toggleRegion = (regionValue: string, checked: boolean) => {
+// 从输入框添加地区
+const addRegionFromInput = () => {
+  const code = regionInput.value.trim()
+  regionInputError.value = ''
+  
+  if (!code) return
+  
+  // 验证格式
+  if (!validateRegionCode(code)) {
+    regionInputError.value = '地区代码格式不正确，应为：语言-地区（如 zh-CN, en-US）'
+    return
+  }
+  
   if (!config.value.Fetcher.Regions) {
     config.value.Fetcher.Regions = []
   }
   
-  if (checked) {
-    if (!config.value.Fetcher.Regions.includes(regionValue)) {
-      config.value.Fetcher.Regions.push(regionValue)
-    }
-  } else {
-    config.value.Fetcher.Regions = config.value.Fetcher.Regions.filter(r => r !== regionValue)
+  // 检查是否已存在
+  if (config.value.Fetcher.Regions.includes(code)) {
+    regionInputError.value = '该地区已存在'
+    return
   }
+  
+  config.value.Fetcher.Regions.push(code)
+  regionInput.value = ''
+  toast.success(`已添加地区: ${code}`)
+}
+
+// 快速添加常用地区
+const addCommonRegion = (code: string) => {
+  if (!config.value.Fetcher.Regions) {
+    config.value.Fetcher.Regions = []
+  }
+  
+  if (config.value.Fetcher.Regions.includes(code)) {
+    return
+  }
+  
+  config.value.Fetcher.Regions.push(code)
+  const region = commonRegions.find(r => r.code === code)
+  toast.success(`已添加地区: ${region?.name || code}`)
+}
+
+// 移除地区
+const removeRegion = (regionValue: string) => {
+  if (!config.value.Fetcher.Regions) return
+  config.value.Fetcher.Regions = config.value.Fetcher.Regions.filter(r => r !== regionValue)
+  toast.success(`已移除地区: ${regionValue}`)
 }
 
 // DSN 示例
@@ -683,7 +794,6 @@ const handleSaveConfig = async () => {
 }
 
 onMounted(() => {
-  fetchRegions()
   fetchConfig()
 })
 </script>
