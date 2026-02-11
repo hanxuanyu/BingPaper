@@ -205,6 +205,29 @@ export interface UpdateLayoutRequest {
   footer?: string
 }
 
+// ===== 统计相关 =====
+
+export interface StatSummary {
+  total: number
+  today: number
+  yesterday: number
+}
+
+export interface StatTrendItem {
+  date: string
+  count: number
+}
+
+export interface StatEndpointItem {
+  endpoint: string
+  count: number
+}
+
+export interface StatRegionItem {
+  mkt: string
+  count: number
+}
+
 // ===== API 端点类型定义 =====
 
 export type ImageVariant = 'UHD' | '1920x1080' | '1366x768' | '1280x720' | '1024x768' | '800x600' | '800x480' | '640x480' | '640x360' | '480x360' | '400x240' | '320x240'

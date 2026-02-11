@@ -14,7 +14,11 @@ import type {
   ImageVariant,
   ImageFormat,
   LayoutResponse,
-  UpdateLayoutRequest
+  UpdateLayoutRequest,
+  StatSummary,
+  StatTrendItem,
+  StatEndpointItem,
+  StatRegionItem
 } from './api-types'
 
 /**
@@ -121,6 +125,39 @@ export class BingPaperApiService {
    */
   async updateLayout(request: UpdateLayoutRequest): Promise<{ message: string }> {
     return apiClient.put('/admin/layout', request)
+  }
+
+  // ===== 统计相关 =====
+
+  /**
+   * 获取统计概览
+   */
+  async getStatSummary(): Promise<StatSummary> {
+    return apiClient.get<StatSummary>('/admin/stats/summary')
+  }
+
+  /**
+   * 获取调用趋势
+   */
+  async getStatTrend(days: number = 7, endpoint?: string): Promise<StatTrendItem[]> {
+    const url = endpoint 
+      ? `/admin/stats/trend?days=${days}&endpoint=${encodeURIComponent(endpoint)}`
+      : `/admin/stats/trend?days=${days}`
+    return apiClient.get<StatTrendItem[]>(url)
+  }
+
+  /**
+   * 获取接口分布
+   */
+  async getStatEndpoints(): Promise<StatEndpointItem[]> {
+    return apiClient.get<StatEndpointItem[]>('/admin/stats/endpoints')
+  }
+
+  /**
+   * 获取地区分布
+   */
+  async getStatRegions(): Promise<StatRegionItem[]> {
+    return apiClient.get<StatRegionItem[]>('/admin/stats/regions')
   }
 
   // ===== 图片相关 =====
@@ -255,6 +292,10 @@ export const {
   getLayout,
   getAdminLayout,
   updateLayout,
+  getStatSummary,
+  getStatTrend,
+  getStatEndpoints,
+  getStatRegions,
   setAuthToken,
   clearAuthToken
 } = bingPaperApi

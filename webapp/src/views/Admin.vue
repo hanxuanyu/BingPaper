@@ -22,12 +22,17 @@
     <!-- 主内容区 -->
     <div class="container mx-auto px-4 py-6">
       <Tabs v-model="activeTab" class="space-y-4">
-        <TabsList class="grid w-full grid-cols-4 lg:w-[500px]">
+        <TabsList class="grid w-full grid-cols-5 lg:w-[600px]">
+          <TabsTrigger value="stats">数据统计</TabsTrigger>
           <TabsTrigger value="tokens">Token 管理</TabsTrigger>
           <TabsTrigger value="tasks">定时任务</TabsTrigger>
           <TabsTrigger value="config">系统配置</TabsTrigger>
           <TabsTrigger value="layout">布局管理</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="stats" class="space-y-4">
+          <AdminStats />
+        </TabsContent>
 
         <TabsContent value="tokens" class="space-y-4">
           <AdminTokens />
@@ -116,9 +121,10 @@ import AdminTokens from './AdminTokens.vue'
 import AdminTasks from './AdminTasks.vue'
 import AdminConfig from './AdminConfig.vue'
 import AdminLayout from './AdminLayout.vue'
+import AdminStats from './AdminStats.vue'
 
 const router = useRouter()
-const activeTab = ref('tokens')
+const activeTab = ref('stats')
 
 const showPasswordDialog = ref(false)
 const passwordForm = ref({

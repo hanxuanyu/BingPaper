@@ -45,3 +45,12 @@ type Token struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type ApiStat struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Date      string    `gorm:"uniqueIndex:idx_date_endpoint_mkt;type:varchar(10)" json:"date"` // YYYY-MM-DD
+	Endpoint  string    `gorm:"uniqueIndex:idx_date_endpoint_mkt;type:varchar(100)" json:"endpoint"`
+	Mkt       string    `gorm:"uniqueIndex:idx_date_endpoint_mkt;type:varchar(20)" json:"mkt"`
+	Count     int64     `gorm:"default:0" json:"count"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
