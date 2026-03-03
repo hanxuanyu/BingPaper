@@ -325,6 +325,21 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
             </router-link>
+
+            <a
+              href="/swagger/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-white/60 hover:text-white transition-colors text-sm flex items-center gap-2 group"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-8-4h8M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"></path>
+              </svg>
+              <span>Swagger API</span>
+              <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14"></path>
+              </svg>
+            </a>
             
             <a 
               href="https://github.com/hanxuanyu/BingPaper" 
