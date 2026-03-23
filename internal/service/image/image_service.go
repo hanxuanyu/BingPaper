@@ -81,7 +81,7 @@ func GetTodayImage(mkt string) (*model.ImageRegion, error) {
 		util.Logger.Info("Image not found in DB, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
 		go func() {
-			_ = f.FetchRegion(context.Background(), mkt)
+			_ = f.FetchRegion(context.Background(), mkt, false)
 		}()
 		return nil, ErrFetchStarted
 	}
@@ -155,7 +155,7 @@ func GetRandomImage(mkt string) (*model.ImageRegion, error) {
 		util.Logger.Info("No images found in DB for region, starting asynchronous on-demand fetch", zap.String("mkt", mkt))
 		f := fetcher.NewFetcher()
 		go func() {
-			_ = f.FetchRegion(context.Background(), mkt)
+			_ = f.FetchRegion(context.Background(), mkt, false)
 		}()
 		return nil, ErrFetchStarted
 	}
@@ -198,7 +198,7 @@ func GetImageByDate(date string, mkt string) (*model.ImageRegion, error) {
 		util.Logger.Info("Image not found in DB for date, starting asynchronous on-demand fetch", zap.String("mkt", mkt), zap.String("date", date))
 		f := fetcher.NewFetcher()
 		go func() {
-			_ = f.FetchRegion(context.Background(), mkt)
+			_ = f.FetchRegion(context.Background(), mkt, false)
 		}()
 		return nil, ErrFetchStarted
 	}

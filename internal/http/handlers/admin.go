@@ -254,7 +254,8 @@ func UpdateConfig(c *gin.Context) {
 }
 
 type ManualFetchRequest struct {
-	N int `json:"n"`
+	N     int  `json:"n"`
+	Force bool `json:"force"`
 }
 
 // ManualFetch 手动触发抓取
@@ -278,10 +279,14 @@ func ManualFetch(c *gin.Context) {
 
 	f := fetcher.NewFetcher()
 	go func() {
-		f.Fetch(context.Background(), req.N)
+		_ = f.Fetch(context.Background(), req.N, req.Force)
 	}()
 
-	c.JSON(http.StatusOK, gin.H{"status": "task started"})
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "task started",
+		"message": "抓取任务已启动",
+		"force":   req.Force,
+	})
 }
 
 // ManualCleanup 手动触发清理

@@ -221,6 +221,7 @@ export interface Region {
 
 export interface ManualFetchRequest {
   n?: number // 抓取天数
+  force?: boolean
 }
 
 // ===== 布局相关 =====

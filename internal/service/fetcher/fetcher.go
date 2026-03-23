@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -66,15 +68,15 @@ func NewFetcher() *Fetcher {
 	}
 }
 
-func (f *Fetcher) Fetch(ctx context.Context, n int) error {
-	util.Logger.Info("Starting fetch task", zap.Int("n", n))
+func (f *Fetcher) Fetch(ctx context.Context, n int, force bool) error {
+	util.Logger.Info("Starting fetch task", zap.Int("n", n), zap.Bool("force", force))
 	regions := config.GetConfig().Fetcher.Regions
 	if len(regions) == 0 {
 		regions = []string{config.GetConfig().GetDefaultRegion()}
 	}
 
 	for _, mkt := range regions {
-		if err := f.FetchRegion(ctx, mkt); err != nil {
+		if err := f.FetchRegion(ctx, mkt, force); err != nil {
 			util.Logger.Error("Failed to fetch region images", zap.String("mkt", mkt), zap.Error(err))
 		}
 	}
@@ -84,27 +86,27 @@ func (f *Fetcher) Fetch(ctx context.Context, n int) error {
 }
 
 // FetchRegion 抓取指定地区的图片
-func (f *Fetcher) FetchRegion(ctx context.Context, mkt string) error {
+func (f *Fetcher) FetchRegion(ctx context.Context, mkt string, force bool) error {
 	if !util.IsValidRegion(mkt) {
 		util.Logger.Warn("Skipping fetch for invalid region", zap.String("mkt", mkt))
 		return fmt.Errorf("invalid region code: %s", mkt)
 	}
-	util.Logger.Info("Fetching images for region", zap.String("mkt", mkt))
+	util.Logger.Info("Fetching images for region", zap.String("mkt", mkt), zap.Bool("force", force))
 	// 调用两次 API 获取最多两周的数据
 	// 第一次 idx=0&n=8 (今天起往回数 8 张)
-	if err := f.fetchByMkt(ctx, mkt, 0, 8); err != nil {
+	if err := f.fetchByMkt(ctx, mkt, 0, 8, force); err != nil {
 		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 0), zap.Error(err))
 		return err
 	}
 	// 第二次 idx=7&n=8 (7天前起往回数 8 张，与第一次有重叠，确保不漏)
-	if err := f.fetchByMkt(ctx, mkt, 7, 8); err != nil {
+	if err := f.fetchByMkt(ctx, mkt, 7, 8, force); err != nil {
 		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 7), zap.Error(err))
 		// 第二次失败不一定返回错误，因为可能第一次已经拿到了
 	}
 	return nil
 }
 
-func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) error {
+func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int, force bool) error {
 	lang := strings.Split(mkt, "-")[0]
 	url := fmt.Sprintf("%s?format=js&idx=%d&n=%d&uhd=1&mkt=%s&setlang=%s", config.BingAPIBase, idx, n, mkt, lang)
 	util.Logger.Info("Requesting Bing API", zap.String("url", url))
@@ -143,7 +145,7 @@ func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) er
 			zap.String("title", bingImg.Title),
 			zap.String("hsh", bingImg.HSH))
 
-		if err := f.processImage(ctx, bingImg, mkt); err != nil {
+		if err := f.processImage(ctx, bingImg, mkt, force); err != nil {
 			util.Logger.Error("Failed to process image", zap.String("date", bingImg.Enddate), zap.String("mkt", mkt), zap.Error(err))
 		}
 	}
@@ -151,14 +153,64 @@ func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int) er
 	return nil
 }
 
-func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt string) error {
+func (f *Fetcher) deleteImageContentIfUnused(ctx context.Context, imageName string, excludingRegionID uint) {
+	if imageName == "" {
+		return
+	}
+
+	var count int64
+	repo.DB.Model(&model.ImageRegion{}).Where("image_name = ? AND id != ?", imageName, excludingRegionID).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	var variants []model.ImageVariant
+	if err := repo.DB.Where("image_name = ?", imageName).Find(&variants).Error; err != nil {
+		util.Logger.Warn("Failed to load variants for stale image cleanup",
+			zap.String("image_name", imageName),
+			zap.Error(err))
+		return
+	}
+
+	for _, variant := range variants {
+		if err := storage.GlobalStorage.Delete(ctx, variant.StorageKey); err != nil {
+			util.Logger.Warn("Failed to delete stale storage object",
+				zap.String("key", variant.StorageKey),
+				zap.Error(err))
+		}
+	}
+
+	if err := repo.DB.Where("image_name = ?", imageName).Delete(&model.ImageVariant{}).Error; err != nil {
+		util.Logger.Warn("Failed to delete stale image variants",
+			zap.String("image_name", imageName),
+			zap.Error(err))
+	}
+}
+
+func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt string, force bool) error {
 	dateStr := fmt.Sprintf("%s-%s-%s", bingImg.Enddate[0:4], bingImg.Enddate[4:6], bingImg.Enddate[6:8])
 
 	// 1. 地区关联幂等检查
 	var existingRegion model.ImageRegion
 	if err := repo.DB.Where("date = ? AND mkt = ?", dateStr, mkt).First(&existingRegion).Error; err == nil {
-		util.Logger.Info("ImageRegion record already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("title", bingImg.Title))
-		return nil
+		if force {
+			util.Logger.Info("Force refresh enabled, existing ImageRegion will be overwritten",
+				zap.String("date", dateStr),
+				zap.String("mkt", mkt),
+				zap.String("existing_image_name", existingRegion.ImageName))
+		} else {
+			util.Logger.Info("ImageRegion record already exists, skipping", zap.String("date", dateStr), zap.String("mkt", mkt), zap.String("title", bingImg.Title))
+			return nil
+		}
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if existingRegion.ID == 0 && !force {
+		// no existing row
+	} else if existingRegion.ID == 0 && force {
+		util.Logger.Info("Force refresh enabled but no existing ImageRegion found, inserting new record",
+			zap.String("date", dateStr),
+			zap.String("mkt", mkt))
 	}
 
 	imageName := f.extractImageName(bingImg.URLBase, bingImg.HSH)
@@ -196,10 +248,13 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 	var srcImg image.Image
 	var imgData []byte
 
-	if allVariantsExist {
+	if allVariantsExist && !force {
 		util.Logger.Debug("Image variants already exist for name, linking only", zap.String("imageName", imageName))
 	} else {
-		util.Logger.Debug("Downloading and processing image", zap.String("url", imgURL), zap.String("imageName", imageName))
+		util.Logger.Debug("Downloading and processing image",
+			zap.String("url", imgURL),
+			zap.String("imageName", imageName),
+			zap.Bool("force", force))
 		var err error
 		imgData, err = f.downloadImage(ctx, imgURL)
 		if err != nil {
@@ -214,7 +269,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		}
 
 		// 保存原图变体
-		if err := f.saveVariant(ctx, imageName, variantName, "jpg", imgData); err != nil {
+		if err := f.saveVariant(ctx, imageName, variantName, "jpg", imgData, force); err != nil {
 			util.Logger.Error("Failed to save original variant", zap.String("variant", variantName), zap.Error(err))
 		}
 
@@ -229,7 +284,7 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 				continue
 			}
 			currentImgData := buf.Bytes()
-			if err := f.saveVariant(ctx, imageName, v.name, "jpg", currentImgData); err != nil {
+			if err := f.saveVariant(ctx, imageName, v.name, "jpg", currentImgData, force); err != nil {
 				util.Logger.Error("Failed to save variant", zap.String("variant", v.name), zap.Error(err))
 			}
 		}
@@ -262,6 +317,10 @@ func (f *Fetcher) processImage(ctx context.Context, bingImg BingImage, mkt strin
 		zap.String("date", dateStr),
 		zap.String("mkt", mkt),
 		zap.String("title", regionRecord.Title))
+
+	if force && existingRegion.ID != 0 && existingRegion.ImageName != "" && existingRegion.ImageName != imageName {
+		f.deleteImageContentIfUnused(ctx, existingRegion.ImageName, existingRegion.ID)
+	}
 
 	// 4. 保存今日额外文件
 	today := time.Now().Format("2006-01-02")
@@ -330,7 +389,7 @@ func (f *Fetcher) generateKey(imageName, variant, format string) string {
 	return fmt.Sprintf("%s/%s_%s.%s", imageName, imageName, variant, format)
 }
 
-func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format string, data []byte) error {
+func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format string, data []byte, force bool) error {
 	key := f.generateKey(imageName, variant, format)
 	contentType := "image/jpeg"
 	if format == "webp" {
@@ -341,7 +400,7 @@ func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format st
 	var publicURL string
 
 	exists, _ := storage.GlobalStorage.Exists(ctx, key)
-	if exists {
+	if exists && !force {
 		util.Logger.Debug("Variant already exists in storage, linking", zap.String("key", key))
 		// 如果存在，尝试获取公共 URL
 		if pURL, ok := storage.GlobalStorage.PublicURL(key); ok {
@@ -373,10 +432,18 @@ func (f *Fetcher) saveVariant(ctx context.Context, imageName, variant, format st
 		Size:       size,
 	}
 
-	err := repo.DB.Clauses(clause.OnConflict{
+	onConflict := clause.OnConflict{
 		Columns:   []clause.Column{{Name: "image_name"}, {Name: "variant"}, {Name: "format"}},
 		DoNothing: true,
-	}).Create(&vRecord).Error
+	}
+	if force {
+		onConflict = clause.OnConflict{
+			Columns:   []clause.Column{{Name: "image_name"}, {Name: "variant"}, {Name: "format"}},
+			UpdateAll: true,
+		}
+	}
+
+	err := repo.DB.Clauses(onConflict).Create(&vRecord).Error
 	if err != nil {
 		return err
 	}

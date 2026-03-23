@@ -27,7 +27,7 @@ func InitCron() {
 	_, err := c.AddFunc(cfg.Cron.DailySpec, func() {
 		util.Logger.Info("Running scheduled daily fetch")
 		f := fetcher.NewFetcher()
-		if err := f.Fetch(context.Background(), 1); err != nil {
+		if err := f.Fetch(context.Background(), 1, false); err != nil {
 			util.Logger.Error("Scheduled fetch failed", zap.Error(err))
 		}
 

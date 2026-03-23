@@ -118,7 +118,7 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	// 6. 启动时执行一次抓取 (可选，这里我们默认执行一次以确保有数据)
 	go func() {
 		f := fetcher.NewFetcher()
-		f.Fetch(context.Background(), config.BingFetchN)
+		_ = f.Fetch(context.Background(), config.BingFetchN, false)
 	}()
 
 	// 7. 设置路由

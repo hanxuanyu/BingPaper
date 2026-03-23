@@ -30,6 +30,15 @@
             指定要抓取的天数（包括今天），最多 30 天
           </p>
         </div>
+        <div class="flex items-center justify-between rounded-md border p-3">
+          <div class="space-y-0.5">
+            <Label for="fetch-force">强制更新</Label>
+            <p class="text-xs text-gray-500">
+              重新从必应拉取图片并覆盖数据库中的原有元数据与变体记录，仅手动抓取时可用。
+            </p>
+          </div>
+          <Switch id="fetch-force" v-model="fetchForce" />
+        </div>
         <Button 
           @click="handleManualFetch" 
           :disabled="fetchLoading"
@@ -107,6 +116,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { apiService } from '@/lib/api-service'
 
 interface TaskRecord {
@@ -117,6 +127,7 @@ interface TaskRecord {
 }
 
 const fetchDays = ref<number>(1)
+const fetchForce = ref(false)
 const fetchLoading = ref(false)
 
 const cleanupLoading = ref(false)
@@ -127,14 +138,14 @@ const handleManualFetch = async () => {
   fetchLoading.value = true
   
   try {
-    const response = await apiService.manualFetch({ n: fetchDays.value })
+    const response = await apiService.manualFetch({ n: fetchDays.value, force: fetchForce.value })
     toast.success(response.message || '抓取任务已启动')
     
     // 添加到历史记录
     taskHistory.value.unshift({
       type: '图片抓取',
       success: true,
-      message: `抓取 ${fetchDays.value} 天的图片`,
+      message: `${fetchForce.value ? '强制' : '普通'}抓取 ${fetchDays.value} 天的图片`,
       timestamp: new Date().toLocaleString('zh-CN')
     })
     
