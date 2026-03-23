@@ -88,6 +88,36 @@ export interface DBConfig {
   DSN: string
 }
 
+export interface DatabaseStatus {
+  active: DBConfig
+  configured: DBConfig
+  pending_restart: boolean
+}
+
+export interface DatabaseConnectionRequest {
+  type: string
+  dsn: string
+}
+
+export interface DatabaseMigrationRequest extends DatabaseConnectionRequest {
+  update_config: boolean
+}
+
+export interface DatabaseMigrationCounts {
+  image_regions: number
+  image_variants: number
+  tokens: number
+  api_stats: number
+}
+
+export interface DatabaseMigrationResult {
+  message: string
+  counts: DatabaseMigrationCounts
+  config_updated: boolean
+  restart_required: boolean
+  target: DBConfig
+}
+
 export interface FeatureConfig {
   WriteDailyFiles: boolean
 }

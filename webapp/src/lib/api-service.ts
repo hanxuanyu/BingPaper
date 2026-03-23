@@ -7,6 +7,10 @@ import type {
   UpdateTokenRequest,
   ChangePasswordRequest,
   Config,
+  DatabaseConnectionRequest,
+  DatabaseMigrationResult,
+  DatabaseMigrationRequest,
+  DatabaseStatus,
   Region,
   ImageMeta,
   ImageListParams,
@@ -86,6 +90,27 @@ export class BingPaperApiService {
    */
   async updateConfig(config: Config): Promise<Config> {
     return apiClient.put<Config>('/admin/config', config)
+  }
+
+  /**
+   * 获取数据库状态
+   */
+  async getDatabaseStatus(): Promise<DatabaseStatus> {
+    return apiClient.get<DatabaseStatus>('/admin/database/status')
+  }
+
+  /**
+   * 验证数据库连接
+   */
+  async validateDatabaseConnection(request: DatabaseConnectionRequest): Promise<{ success: boolean; message: string }> {
+    return apiClient.post('/admin/database/validate', request)
+  }
+
+  /**
+   * 执行数据库迁移
+   */
+  async migrateDatabase(request: DatabaseMigrationRequest): Promise<DatabaseMigrationResult> {
+    return apiClient.post<DatabaseMigrationResult>('/admin/database/migrate', request)
   }
 
   // ===== 系统管理 =====

@@ -70,6 +70,9 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 
 				authorized.GET("/config", handlers.GetConfig)
 				authorized.PUT("/config", handlers.UpdateConfig)
+				authorized.GET("/database/status", handlers.GetDatabaseStatus)
+				authorized.POST("/database/validate", handlers.ValidateDatabaseConnection)
+				authorized.POST("/database/migrate", handlers.MigrateDatabase)
 
 				authorized.POST("/fetch", handlers.ManualFetch)
 				authorized.POST("/cleanup", handlers.ManualCleanup)

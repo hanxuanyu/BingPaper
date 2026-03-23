@@ -12,7 +12,7 @@ type ImageRegion struct {
 	Mkt           string         `gorm:"uniqueIndex:idx_date_mkt;index:idx_mkt_date,priority:1;type:varchar(10)" json:"mkt"`  // zh-CN, en-US etc.
 	HSH           string         `gorm:"type:varchar(64)" json:"hsh"`
 	URLBase       string         `json:"urlbase"`
-	ImageName     string         `gorm:"index" json:"image_name"`
+	ImageName     string         `gorm:"index;type:varchar(100)" json:"image_name"`
 	Title         string         `json:"title"`
 	Copyright     string         `json:"copyright"`
 	CopyrightLink string         `json:"copyrightlink"`

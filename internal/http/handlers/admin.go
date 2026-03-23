@@ -233,6 +233,13 @@ func UpdateConfig(c *gin.Context) {
 		return
 	}
 
+	currentCfg := config.GetConfig()
+	if currentCfg.DB != cfg.DB {
+		msg := "数据库配置不能通过普通配置保存直接修改，请使用独立的数据库迁移功能"
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg, "message": msg})
+		return
+	}
+
 	if err := config.SaveConfig(&cfg); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

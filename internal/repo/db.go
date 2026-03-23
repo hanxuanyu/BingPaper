@@ -17,6 +17,7 @@ import (
 )
 
 var DB *gorm.DB
+var ActiveDBConfig config.DBConfig
 
 type gormLogger struct {
 	ZapLogger *zap.Logger
@@ -109,20 +110,58 @@ func GetGormConfig(cfg *config.Config) *gorm.Config {
 			ZapLogger: util.DBLogger,
 			LogLevel:  gormLogLevel,
 		},
+		// 由代码层维护关联关系，迁移时不创建数据库外键约束，降低跨数据库类型切换时的兼容风险。
 		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 }
 
-func InitDB() error {
-	cfg := config.GetConfig()
+func openDB(cfg *config.Config) (*gorm.DB, error) {
 	dialector, err := GetDialector(cfg.DB.Type, cfg.DB.DSN)
+	if err != nil {
+		return nil, err
+	}
+
+	gormConfig := GetGormConfig(cfg)
+	return gorm.Open(dialector, gormConfig)
+}
+
+func BuildDBRuntimeConfig(baseCfg *config.Config, dbCfg config.DBConfig) *config.Config {
+	runtimeCfg := *baseCfg
+	runtimeCfg.DB = dbCfg
+	return &runtimeCfg
+}
+
+func AutoMigrateModels(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&model.ImageRegion{},
+		&model.ImageVariant{},
+		&model.Token{},
+		&model.ApiStat{},
+	)
+}
+
+func ValidateDBConnection(baseCfg *config.Config, dbCfg config.DBConfig) error {
+	db, err := openDB(BuildDBRuntimeConfig(baseCfg, dbCfg))
 	if err != nil {
 		return err
 	}
 
-	gormConfig := GetGormConfig(cfg)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
 
-	db, err := gorm.Open(dialector, gormConfig)
+	return sqlDB.Ping()
+}
+
+func GetActiveDBConfig() config.DBConfig {
+	return ActiveDBConfig
+}
+
+func InitDB() error {
+	cfg := config.GetConfig()
+	db, err := openDB(cfg)
 	if err != nil {
 		return err
 	}
@@ -131,12 +170,13 @@ func InitDB() error {
 	// 但此处假设 DSN 中指定的数据库已经存在。AutoMigrate 会负责创建表。
 
 	// 迁移
-	if err := db.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}, &model.ApiStat{}); err != nil {
+	if err := AutoMigrateModels(db); err != nil {
 		util.Logger.Error("Database migration failed", zap.Error(err))
 		return err
 	}
 
 	DB = db
+	ActiveDBConfig = cfg.DB
 	util.Logger.Info("Database initialized successfully", zap.String("type", cfg.DB.Type))
 	return nil
 }

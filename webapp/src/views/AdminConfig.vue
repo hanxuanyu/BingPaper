@@ -157,37 +157,53 @@
 
         <!-- 数据库配置 -->
         <Card>
-          <CardHeader>
-            <CardTitle>数据库配置</CardTitle>
+          <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="space-y-1">
+              <CardTitle>数据库配置</CardTitle>
+              <CardDescription>
+                普通配置保存不再支持直接切换数据库，请通过独立的迁移工具完成跨库迁移和配置更新。
+              </CardDescription>
+            </div>
+            <Button variant="outline" @click="openMigrationDialog">
+              数据库迁移
+            </Button>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div class="space-y-2">
-              <Label>数据库类型</Label>
-              <Select v-model="config.DB.Type">
-                <SelectTrigger>
-                  <SelectValue placeholder="选择数据库类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sqlite">SQLite</SelectItem>
-                  <SelectItem value="mysql">MySQL</SelectItem>
-                  <SelectItem value="postgres">PostgreSQL</SelectItem>
-                </SelectContent>
-              </Select>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="space-y-2">
+                <Label>当前使用中的数据库</Label>
+                <div class="rounded-md border bg-gray-50 p-3 space-y-2">
+                  <div class="text-sm font-medium">
+                    {{ formatDBType(activeDatabase.Type) }}
+                  </div>
+                  <p class="break-all font-mono text-xs text-gray-600">
+                    {{ activeDatabase.DSN || '-' }}
+                  </p>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <Label>配置文件中的数据库</Label>
+                <div class="rounded-md border bg-gray-50 p-3 space-y-2">
+                  <div class="text-sm font-medium">
+                    {{ formatDBType(configuredDatabase.Type) }}
+                  </div>
+                  <p class="break-all font-mono text-xs text-gray-600">
+                    {{ configuredDatabase.DSN || '-' }}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div class="space-y-2">
-              <Label>DSN (数据源名称)</Label>
-              <Input 
-                v-model="config.DB.DSN" 
-                placeholder="数据库连接字符串"
-                :class="{ 'border-red-500': dsnError }"
-                @blur="validateDSN"
-              />
-              <p v-if="dsnExamples" class="text-xs text-gray-500">
-                💡 示例: {{ dsnExamples }}
-              </p>
-              <p v-if="dsnError" class="text-xs text-red-600">
-                ❌ {{ dsnError }}
-              </p>
+            <div
+              v-if="databaseStatus?.pending_restart"
+              class="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700"
+            >
+              当前服务仍在使用旧库，配置文件已指向另一套数据库。只有在服务重启后，新的数据库配置才会生效。
+            </div>
+            <div
+              v-else
+              class="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+            >
+              代码层维护图片与变体之间的关联关系，迁移和建表阶段不会创建数据库外键约束。
             </div>
           </CardContent>
         </Card>
@@ -507,14 +523,124 @@
         </Card>
       </div>
     </div>
+
+    <Dialog v-model:open="showMigrationDialog">
+      <DialogContent class="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>数据库迁移</DialogTitle>
+          <DialogDescription>
+            先验证目标数据库连接，验证通过后再执行显式迁移。迁移过程会先建表，再全量复制数据到目标库。
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-5">
+          <div class="rounded-md border bg-gray-50 p-4 space-y-3">
+            <div class="text-sm font-medium">当前使用中的数据库</div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="space-y-2">
+                <Label>数据库类型</Label>
+                <Input :model-value="formatDBType(activeDatabase.Type)" disabled />
+              </div>
+              <div class="space-y-2 md:col-span-2">
+                <Label>DSN</Label>
+                <Input :model-value="activeDatabase.DSN" disabled />
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="space-y-2">
+                <Label>目标数据库类型</Label>
+                <Select v-model="migrationForm.type">
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择数据库类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sqlite">SQLite</SelectItem>
+                    <SelectItem value="mysql">MySQL</SelectItem>
+                    <SelectItem value="postgres">PostgreSQL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="flex items-center justify-between rounded-md border p-3">
+                <div class="space-y-0.5">
+                  <Label for="update-db-config">迁移成功后自动更新配置</Label>
+                  <p class="text-xs text-gray-500">
+                    开启后会把配置文件中的数据库类型与 DSN 更新为目标库，重启服务后生效。
+                  </p>
+                </div>
+                <Switch id="update-db-config" v-model="migrationForm.update_config" />
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <Label>目标数据库 DSN</Label>
+              <Input
+                v-model="migrationForm.dsn"
+                placeholder="输入目标数据库连接字符串"
+                :disabled="validateLoading || migrateLoading"
+              />
+              <p class="text-xs text-gray-500">
+                示例: {{ migrationDsnExample }}
+              </p>
+            </div>
+
+            <div
+              v-if="migrationValidationSuccess"
+              class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700"
+            >
+              {{ migrationValidationMessage }}
+            </div>
+            <div
+              v-else-if="migrationError"
+              class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            >
+              {{ migrationError }}
+            </div>
+
+            <div class="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              迁移过程不会直接切换当前服务的活动数据库连接。为保证跨数据库类型兼容，表结构避免使用外键约束，关联关系由代码层维护。
+            </div>
+          </div>
+
+          <DialogFooter class="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              @click="showMigrationDialog = false"
+              :disabled="validateLoading || migrateLoading"
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              @click="handleValidateDatabaseConnection"
+              :disabled="validateLoading || migrateLoading"
+            >
+              {{ validateLoading ? '验证中...' : '验证连接' }}
+            </Button>
+            <Button
+              type="button"
+              @click="handleMigrateDatabase"
+              :disabled="!canRunMigration || migrateLoading"
+            >
+              {{ migrateLoading ? '迁移中...' : '开始迁移' }}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -522,13 +648,25 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { apiService } from '@/lib/api-service'
-import type { Config } from '@/lib/api-types'
+import type { Config, DatabaseMigrationRequest, DatabaseStatus, DBConfig } from '@/lib/api-types'
 
 const editMode = ref<'json' | 'form'>('form')
 const loading = ref(false)
 const loadError = ref('')
 const saveLoading = ref(false)
-const dsnError = ref('')
+const showMigrationDialog = ref(false)
+const validateLoading = ref(false)
+const migrateLoading = ref(false)
+const migrationValidationSuccess = ref(false)
+const migrationValidationMessage = ref('')
+const migrationError = ref('')
+const databaseStatus = ref<DatabaseStatus | null>(null)
+const lockedDatabaseConfig = ref<DBConfig>({ Type: 'sqlite', DSN: '' })
+const migrationForm = ref<DatabaseMigrationRequest>({
+  type: 'sqlite',
+  dsn: '',
+  update_config: false
+})
 
 // 地区输入相关
 const regionInput = ref('')
@@ -605,6 +743,78 @@ const config = ref<Config>({
 const configJson = ref('')
 const jsonError = ref('')
 
+const cloneDBConfig = (db: DBConfig): DBConfig => ({
+  Type: db.Type,
+  DSN: db.DSN
+})
+
+const dbConfigsEqual = (a: DBConfig, b: DBConfig): boolean => {
+  return a.Type === b.Type && a.DSN === b.DSN
+}
+
+const formatDBType = (type: string): string => {
+  switch (type) {
+    case 'sqlite':
+      return 'SQLite'
+    case 'mysql':
+      return 'MySQL'
+    case 'postgres':
+      return 'PostgreSQL'
+    default:
+      return type || '-'
+  }
+}
+
+const getDSNExample = (type: string): string => {
+  switch (type) {
+    case 'sqlite':
+      return 'data/bing_paper.db 或 file:data/bing_paper.db?cache=shared'
+    case 'mysql':
+      return 'user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True'
+    case 'postgres':
+      return 'host=localhost user=postgres password=secret dbname=mydb port=5432 sslmode=disable'
+    default:
+      return ''
+  }
+}
+
+const validateTargetDatabase = (type: string, rawDSN: string): string => {
+  const dsn = rawDSN.trim()
+  if (!dsn) {
+    return 'DSN 不能为空'
+  }
+
+  if (activeDatabase.value.Type === type && activeDatabase.value.DSN === dsn) {
+    return '目标数据库不能与当前正在使用的数据库相同'
+  }
+
+  switch (type) {
+    case 'mysql':
+      if (!dsn.includes('@tcp(') && !dsn.includes('://')) {
+        return 'MySQL DSN 格式不正确，应包含 @tcp( 或使用 URI 格式'
+      }
+      break
+    case 'postgres':
+      if (!dsn.includes('host=') && !dsn.includes('://')) {
+        return 'PostgreSQL DSN 格式不正确，应包含 host= 或使用 URI 格式'
+      }
+      break
+  }
+
+  return ''
+}
+
+const activeDatabase = computed<DBConfig>(() => {
+  return databaseStatus.value?.active ?? lockedDatabaseConfig.value
+})
+
+const configuredDatabase = computed<DBConfig>(() => {
+  return databaseStatus.value?.configured ?? lockedDatabaseConfig.value
+})
+
+const migrationDsnExample = computed(() => getDSNExample(migrationForm.value.type))
+const canRunMigration = computed(() => migrationValidationSuccess.value && !validateLoading.value && !migrateLoading.value)
+
 // 验证地区代码格式 (语言-地区格式，如 zh-CN)
 const validateRegionCode = (code: string): boolean => {
   // 基本格式验证：2-3个字母 + 连字符 + 2个字母，如 zh-CN, en-US
@@ -662,48 +872,6 @@ const removeRegion = (regionValue: string) => {
   toast.success(`已移除地区: ${regionValue}`)
 }
 
-// DSN 示例
-const dsnExamples = computed(() => {
-  switch (config.value.DB.Type) {
-    case 'sqlite':
-      return 'data/bing_paper.db 或 file:data/bing_paper.db?cache=shared'
-    case 'mysql':
-      return 'user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True'
-    case 'postgres':
-      return 'host=localhost user=postgres password=secret dbname=mydb port=5432 sslmode=disable'
-    default:
-      return ''
-  }
-})
-
-// 验证 DSN
-const validateDSN = () => {
-  dsnError.value = ''
-  const dsn = config.value.DB.DSN.trim()
-  
-  if (!dsn) {
-    dsnError.value = 'DSN 不能为空'
-    return false
-  }
-  
-  switch (config.value.DB.Type) {
-    case 'mysql':
-      if (!dsn.includes('@tcp(') && !dsn.includes('://')) {
-        dsnError.value = 'MySQL DSN 格式不正确，应包含 @tcp( 或使用 URI 格式'
-        return false
-      }
-      break
-    case 'postgres':
-      if (!dsn.includes('host=') && !dsn.includes('://')) {
-        dsnError.value = 'PostgreSQL DSN 格式不正确，应包含 host= 或使用 URI 格式'
-        return false
-      }
-      break
-  }
-  
-  return true
-}
-
 // 格式化 JSON
 const formatJson = () => {
   try {
@@ -734,12 +902,97 @@ const fetchConfig = async () => {
   try {
     const data = await apiService.getConfig()
     config.value = data
+    lockedDatabaseConfig.value = cloneDBConfig(data.DB)
     configJson.value = JSON.stringify(data, null, 2)
   } catch (err: any) {
     loadError.value = err.message || '获取配置失败'
     console.error('获取配置失败:', err)
   } finally {
     loading.value = false
+  }
+}
+
+const fetchDatabaseStatus = async () => {
+  try {
+    databaseStatus.value = await apiService.getDatabaseStatus()
+  } catch (err: any) {
+    console.error('获取数据库状态失败:', err)
+  }
+}
+
+const resetMigrationState = () => {
+  migrationValidationSuccess.value = false
+  migrationValidationMessage.value = ''
+  migrationError.value = ''
+}
+
+const openMigrationDialog = async () => {
+  await fetchDatabaseStatus()
+  migrationForm.value = {
+    type: activeDatabase.value.Type || 'sqlite',
+    dsn: '',
+    update_config: false
+  }
+  resetMigrationState()
+  showMigrationDialog.value = true
+}
+
+const handleValidateDatabaseConnection = async () => {
+  const validationError = validateTargetDatabase(migrationForm.value.type, migrationForm.value.dsn)
+  if (validationError) {
+    migrationValidationSuccess.value = false
+    migrationValidationMessage.value = ''
+    migrationError.value = validationError
+    toast.error(validationError)
+    return
+  }
+
+  validateLoading.value = true
+  resetMigrationState()
+
+  try {
+    const response = await apiService.validateDatabaseConnection({
+      type: migrationForm.value.type,
+      dsn: migrationForm.value.dsn.trim()
+    })
+    migrationValidationSuccess.value = true
+    migrationValidationMessage.value = response.message
+    toast.success(response.message)
+  } catch (err: any) {
+    migrationError.value = err.message || '数据库连接验证失败'
+    toast.error(migrationError.value)
+  } finally {
+    validateLoading.value = false
+  }
+}
+
+const handleMigrateDatabase = async () => {
+  if (!migrationValidationSuccess.value) {
+    toast.error('请先验证目标数据库连接')
+    return
+  }
+
+  migrateLoading.value = true
+  migrationError.value = ''
+
+  try {
+    const result = await apiService.migrateDatabase({
+      type: migrationForm.value.type,
+      dsn: migrationForm.value.dsn.trim(),
+      update_config: migrationForm.value.update_config
+    })
+
+    const summary = `ImageRegion ${result.counts.image_regions} 条，ImageVariant ${result.counts.image_variants} 条，Token ${result.counts.tokens} 条，ApiStat ${result.counts.api_stats} 条`
+    toast.success(result.message)
+    toast.success(summary)
+
+    showMigrationDialog.value = false
+    await Promise.all([fetchConfig(), fetchDatabaseStatus()])
+  } catch (err: any) {
+    migrationError.value = err.message || '数据库迁移失败'
+    toast.error(migrationError.value)
+  } finally {
+    migrateLoading.value = false
   }
 }
 
@@ -763,6 +1016,16 @@ watch(configJson, (newJson) => {
   }
 })
 
+watch(() => [migrationForm.value.type, migrationForm.value.dsn], () => {
+  resetMigrationState()
+})
+
+watch(showMigrationDialog, (open) => {
+  if (!open) {
+    resetMigrationState()
+  }
+})
+
 const handleSaveConfig = async () => {
   saveLoading.value = true
   
@@ -773,18 +1036,17 @@ const handleSaveConfig = async () => {
         throw new Error('JSON 格式不正确，请检查语法')
       }
       config.value = JSON.parse(configJson.value)
-    } else {
-      // 表单模式下验证 DSN
-      if (!validateDSN()) {
-        throw new Error('DSN 格式不正确: ' + dsnError.value)
-      }
+    }
+
+    if (!dbConfigsEqual(config.value.DB, lockedDatabaseConfig.value)) {
+      throw new Error('数据库配置请使用独立的数据库迁移功能，普通保存不支持直接修改')
     }
     
     await apiService.updateConfig(config.value)
     toast.success('配置保存成功')
     
     // 重新加载配置
-    await fetchConfig()
+    await Promise.all([fetchConfig(), fetchDatabaseStatus()])
   } catch (err: any) {
     toast.error(err.message || '保存配置失败')
     console.error('保存配置失败:', err)
@@ -795,5 +1057,6 @@ const handleSaveConfig = async () => {
 
 onMounted(() => {
   fetchConfig()
+  fetchDatabaseStatus()
 })
 </script>

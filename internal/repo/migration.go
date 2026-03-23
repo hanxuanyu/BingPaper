@@ -5,95 +5,124 @@ import (
 	"BingPaper/internal/model"
 	"BingPaper/internal/util"
 	"fmt"
+	"sync"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-// MigrateDataToNewDB 将数据从旧数据库迁移到新数据库
-func MigrateDataToNewDB(oldDB *gorm.DB, newConfig *config.Config) error {
-	util.Logger.Info("Starting data migration to new database",
-		zap.String("new_type", newConfig.DB.Type),
-		zap.String("new_dsn", newConfig.DB.DSN))
+type MigrationStats struct {
+	ImageRegions  int `json:"image_regions"`
+	ImageVariants int `json:"image_variants"`
+	Tokens        int `json:"tokens"`
+	ApiStats      int `json:"api_stats"`
+}
 
-	// 1. 初始化新数据库连接
-	dialector, err := GetDialector(newConfig.DB.Type, newConfig.DB.DSN)
-	if err != nil {
-		return fmt.Errorf("failed to get dialector for new DB: %w", err)
+var migrationMu sync.Mutex
+
+func migrateTable[T any](source *gorm.DB, target *gorm.DB, modelName string) (int, error) {
+	var rows []T
+	if err := source.Unscoped().Order("id asc").Find(&rows).Error; err != nil {
+		return 0, fmt.Errorf("failed to fetch %s from source DB: %w", modelName, err)
+	}
+	if len(rows) == 0 {
+		return 0, nil
 	}
 
-	gormConfig := GetGormConfig(newConfig)
-	newDB, err := gorm.Open(dialector, gormConfig)
+	util.Logger.Info("Migrating table",
+		zap.String("model", modelName),
+		zap.Int("count", len(rows)))
+
+	if err := target.CreateInBatches(&rows, 200).Error; err != nil {
+		return 0, fmt.Errorf("failed to insert %s into target DB: %w", modelName, err)
+	}
+	return len(rows), nil
+}
+
+// MigrateDataToNewDB 将数据从当前运行中的数据库迁移到目标数据库。
+// 该过程只迁移数据，不会切换当前服务的活动数据库连接。
+func MigrateDataToNewDB(oldDB *gorm.DB, baseCfg *config.Config, targetDB config.DBConfig) (MigrationStats, error) {
+	var stats MigrationStats
+	if oldDB == nil {
+		return stats, fmt.Errorf("source database is not initialized")
+	}
+
+	migrationMu.Lock()
+	defer migrationMu.Unlock()
+
+	util.Logger.Info("Starting data migration to new database",
+		zap.String("new_type", targetDB.Type),
+		zap.String("new_dsn", targetDB.DSN))
+
+	// 1. 初始化新数据库连接
+	newDB, err := openDB(BuildDBRuntimeConfig(baseCfg, targetDB))
 	if err != nil {
-		return fmt.Errorf("failed to connect to new DB: %w", err)
+		return stats, fmt.Errorf("failed to connect to target DB: %w", err)
+	}
+
+	sqlDB, err := newDB.DB()
+	if err != nil {
+		return stats, fmt.Errorf("failed to get target SQL DB: %w", err)
+	}
+	defer sqlDB.Close()
+
+	if err := sqlDB.Ping(); err != nil {
+		return stats, fmt.Errorf("failed to ping target DB: %w", err)
 	}
 
 	// 2. 自动迁移结构
-	if err := newDB.AutoMigrate(&model.ImageRegion{}, &model.ImageVariant{}, &model.Token{}, &model.ApiStat{}); err != nil {
-		return fmt.Errorf("failed to migrate schema in new DB: %w", err)
+	if err := AutoMigrateModels(newDB); err != nil {
+		return stats, fmt.Errorf("failed to migrate schema in target DB: %w", err)
 	}
 
 	// 3. 清空新数据库中的现有数据（防止冲突）
 	util.Logger.Info("Cleaning up destination database before migration")
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ImageVariant{}).Error; err != nil {
-		return fmt.Errorf("failed to clear ImageVariants: %w", err)
+		return stats, fmt.Errorf("failed to clear ImageVariants: %w", err)
 	}
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ImageRegion{}).Error; err != nil {
-		return fmt.Errorf("failed to clear ImageRegions: %w", err)
+		return stats, fmt.Errorf("failed to clear ImageRegions: %w", err)
 	}
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Token{}).Error; err != nil {
-		return fmt.Errorf("failed to clear Tokens: %w", err)
+		return stats, fmt.Errorf("failed to clear Tokens: %w", err)
 	}
 	if err := newDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ApiStat{}).Error; err != nil {
-		return fmt.Errorf("failed to clear ApiStats: %w", err)
+		return stats, fmt.Errorf("failed to clear ApiStats: %w", err)
 	}
 
 	// 4. 开始迁移数据
 	// 使用事务确保迁移的原子性
-	return newDB.Transaction(func(tx *gorm.DB) error {
-		// 迁移 ImageRegions
-		var regions []model.ImageRegion
-		if err := oldDB.Find(&regions).Error; err != nil {
-			return fmt.Errorf("failed to fetch image regions from old DB: %w", err)
-		}
-		if len(regions) > 0 {
-			util.Logger.Info("Migrating image regions", zap.Int("count", len(regions)))
-			if err := tx.Create(&regions).Error; err != nil {
-				return fmt.Errorf("failed to insert image regions into new DB: %w", err)
-			}
+	if err := newDB.Transaction(func(tx *gorm.DB) error {
+		stats.ImageRegions, err = migrateTable[model.ImageRegion](oldDB, tx, "ImageRegion")
+		if err != nil {
+			return err
 		}
 
-		// 迁移 ImageVariants
-		var variants []model.ImageVariant
-		if err := oldDB.Find(&variants).Error; err != nil {
-			return fmt.Errorf("failed to fetch variants from old DB: %w", err)
-		}
-		if len(variants) > 0 {
-			util.Logger.Info("Migrating variants", zap.Int("count", len(variants)))
-			if err := tx.Create(&variants).Error; err != nil {
-				return fmt.Errorf("failed to insert variants into new DB: %w", err)
-			}
+		stats.ImageVariants, err = migrateTable[model.ImageVariant](oldDB, tx, "ImageVariant")
+		if err != nil {
+			return err
 		}
 
-		// 迁移 Tokens
-		var tokens []model.Token
-		if err := oldDB.Find(&tokens).Error; err != nil {
-			return fmt.Errorf("failed to fetch tokens from old DB: %w", err)
-		}
-		if len(tokens) > 0 {
-			util.Logger.Info("Migrating tokens", zap.Int("count", len(tokens)))
-			if err := tx.Create(&tokens).Error; err != nil {
-				return fmt.Errorf("failed to insert tokens into new DB: %w", err)
-			}
+		stats.Tokens, err = migrateTable[model.Token](oldDB, tx, "Token")
+		if err != nil {
+			return err
 		}
 
-		// 迁移 ApiStats (由于结构变更，这里简单跳过或者你可以选择进行聚合迁移)
-		// 鉴于需求是不再记录详细信息，旧的详细记录不直接兼容新的聚合表结构
-		util.Logger.Info("Skipping ApiStats migration due to schema change (from detailed to aggregated)")
+		stats.ApiStats, err = migrateTable[model.ApiStat](oldDB, tx, "ApiStat")
+		if err != nil {
+			return err
+		}
 
-		// 更新全局 DB 指针
-		DB = newDB
-		util.Logger.Info("Data migration completed successfully")
 		return nil
-	})
+	}); err != nil {
+		return stats, err
+	}
+
+	util.Logger.Info("Data migration completed successfully",
+		zap.Int("image_regions", stats.ImageRegions),
+		zap.Int("image_variants", stats.ImageVariants),
+		zap.Int("tokens", stats.Tokens),
+		zap.Int("api_stats", stats.ApiStats))
+
+	return stats, nil
 }
