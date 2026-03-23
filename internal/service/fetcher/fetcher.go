@@ -48,6 +48,13 @@ type Fetcher struct {
 	httpClient *http.Client
 }
 
+type fetchWindow struct {
+	idx int
+	n   int
+}
+
+const maxFetchPages = 2
+
 func NewFetcher() *Fetcher {
 	// 使用 DefaultTransport 的副本并显式设置代理
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -69,6 +76,13 @@ func NewFetcher() *Fetcher {
 }
 
 func (f *Fetcher) Fetch(ctx context.Context, n int, force bool) error {
+	if n <= 0 {
+		n = config.BingFetchN
+	}
+	if n > maxFetchPages*config.BingFetchN {
+		n = maxFetchPages * config.BingFetchN
+	}
+
 	util.Logger.Info("Starting fetch task", zap.Int("n", n), zap.Bool("force", force))
 	regions := config.GetConfig().Fetcher.Regions
 	if len(regions) == 0 {
@@ -76,7 +90,7 @@ func (f *Fetcher) Fetch(ctx context.Context, n int, force bool) error {
 	}
 
 	for _, mkt := range regions {
-		if err := f.FetchRegion(ctx, mkt, force); err != nil {
+		if err := f.fetchRegionDays(ctx, mkt, n, force); err != nil {
 			util.Logger.Error("Failed to fetch region images", zap.String("mkt", mkt), zap.Error(err))
 		}
 	}
@@ -87,23 +101,60 @@ func (f *Fetcher) Fetch(ctx context.Context, n int, force bool) error {
 
 // FetchRegion 抓取指定地区的图片
 func (f *Fetcher) FetchRegion(ctx context.Context, mkt string, force bool) error {
+	return f.fetchRegionDays(ctx, mkt, config.BingFetchN, force)
+}
+
+func (f *Fetcher) fetchRegionDays(ctx context.Context, mkt string, n int, force bool) error {
 	if !util.IsValidRegion(mkt) {
 		util.Logger.Warn("Skipping fetch for invalid region", zap.String("mkt", mkt))
 		return fmt.Errorf("invalid region code: %s", mkt)
 	}
-	util.Logger.Info("Fetching images for region", zap.String("mkt", mkt), zap.Bool("force", force))
-	// 调用两次 API 获取最多两周的数据
-	// 第一次 idx=0&n=8 (今天起往回数 8 张)
-	if err := f.fetchByMkt(ctx, mkt, 0, 8, force); err != nil {
-		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 0), zap.Error(err))
-		return err
+	if n <= 0 {
+		n = config.BingFetchN
 	}
-	// 第二次 idx=7&n=8 (7天前起往回数 8 张，与第一次有重叠，确保不漏)
-	if err := f.fetchByMkt(ctx, mkt, 7, 8, force); err != nil {
-		util.Logger.Error("Failed to fetch images", zap.String("mkt", mkt), zap.Int("idx", 7), zap.Error(err))
-		// 第二次失败不一定返回错误，因为可能第一次已经拿到了
+	if n > maxFetchPages*config.BingFetchN {
+		n = maxFetchPages * config.BingFetchN
 	}
+
+	windows := buildFetchWindows(n)
+	util.Logger.Info("Fetching images for region",
+		zap.String("mkt", mkt),
+		zap.Int("days", n),
+		zap.Int("batches", len(windows)),
+		zap.Bool("force", force))
+
+	for _, window := range windows {
+		if err := f.fetchByMkt(ctx, mkt, window.idx, window.n, force); err != nil {
+			util.Logger.Error("Failed to fetch images",
+				zap.String("mkt", mkt),
+				zap.Int("idx", window.idx),
+				zap.Int("n", window.n),
+				zap.Error(err))
+			return err
+		}
+	}
+
 	return nil
+}
+
+func buildFetchWindows(totalDays int) []fetchWindow {
+	if totalDays <= 0 {
+		return nil
+	}
+
+	const maxBatchSize = config.BingFetchN
+	const maxTotalDays = maxFetchPages * maxBatchSize
+	if totalDays > maxTotalDays {
+		totalDays = maxTotalDays
+	}
+
+	windows := make([]fetchWindow, 0, (totalDays+maxBatchSize-1)/maxBatchSize)
+	for idx := 0; idx < totalDays; idx += maxBatchSize {
+		batchSize := min(maxBatchSize, totalDays-idx)
+		windows = append(windows, fetchWindow{idx: idx, n: batchSize})
+	}
+
+	return windows
 }
 
 func (f *Fetcher) fetchByMkt(ctx context.Context, mkt string, idx int, n int, force bool) error {

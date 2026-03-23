@@ -15,6 +15,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const maxManualFetchDays = fetcherMaxDays
+const fetcherMaxDays = config.BingFetchN * 2
+
 type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
@@ -273,8 +276,15 @@ func ManualFetch(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req.N = config.BingFetchN
 	}
-	if req.N <= 0 {
+	if req.N == 0 {
 		req.N = config.BingFetchN
+	}
+	if req.N < 0 || req.N > maxManualFetchDays {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "n must be between 1 and 16",
+			"message": "抓取天数必须在 1 到 16 天之间",
+		})
+		return
 	}
 
 	f := fetcher.NewFetcher()
@@ -285,6 +295,7 @@ func ManualFetch(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "task started",
 		"message": "抓取任务已启动",
+		"n":       req.N,
 		"force":   req.Force,
 	})
 }
