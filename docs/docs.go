@@ -523,6 +523,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/healthz": {
+            "get": {
+                "description": "返回服务健康状态，用于部署探针与存活检查",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "健康检查",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/image/date/{date}": {
             "get": {
                 "description": "根据日期返回图片流或重定向 (yyyy-mm-dd)",
@@ -1321,6 +1353,9 @@ const docTemplate = `{
         "handlers.ManualFetchRequest": {
             "type": "object",
             "properties": {
+                "force": {
+                    "type": "boolean"
+                },
                 "n": {
                     "type": "integer"
                 }
