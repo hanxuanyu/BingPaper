@@ -36,6 +36,8 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 
 	api := r.Group("/api/v1")
 	{
+		api.GET("/healthz", gin.WrapF(HealthHandler))
+
 		// 公共接口
 		img := api.Group("/image")
 		img.Use(middleware.StatMiddleware())

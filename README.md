@@ -47,6 +47,7 @@ go run .
 - 今日图片：`http://localhost:8080/api/v1/image/today`
 - 今日元数据：`http://localhost:8080/api/v1/image/today/meta`
 - API 文档 (Swagger)：`http://localhost:8080/swagger/index.html`
+- 健康检查：`http://localhost:8080/api/v1/healthz`（无鉴权）
 
 ## API 文档 (v1)
 
