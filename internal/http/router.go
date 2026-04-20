@@ -16,8 +16,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter(webFS embed.FS) *gin.Engine {
@@ -32,10 +30,12 @@ func SetupRouter(webFS embed.FS) *gin.Engine {
 	r.Use(cors.New(corsConfig))
 
 	// Swagger
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/swagger/*any", SwaggerUIHandler())
 
 	api := r.Group("/api/v1")
 	{
+		api.GET("/healthz", gin.WrapF(HealthHandler))
+
 		// 公共接口
 		img := api.Group("/image")
 		img.Use(middleware.StatMiddleware())

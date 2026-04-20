@@ -10,7 +10,7 @@ import (
 
 	"BingPaper/internal/config"
 	"BingPaper/internal/cron"
-	"BingPaper/internal/http"
+	apphttp "BingPaper/internal/http"
 	"BingPaper/internal/repo"
 	"BingPaper/internal/service/fetcher"
 	"BingPaper/internal/storage"
@@ -23,22 +23,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// Init 初始化应用各项服务
+// Init initializes the application services.
 func Init(webFS embed.FS, configPath string) *gin.Engine {
-	// 0. 确保数据目录存在
 	_ = os.MkdirAll("data/picture", 0755)
 	_ = os.MkdirAll("data/layout", 0755)
 
-	// 1. 初始化配置
 	if err := config.Init(configPath); err != nil {
 		log.Fatalf("Failed to initialize config: %v", err)
 	}
 	cfg := config.GetConfig()
 
-	// 2. 初始化日志
 	util.InitLogger(cfg.Log)
 
-	// 以 debug 级别输出配置加载详情和环境变量覆盖情况
 	util.Logger.Debug("Configuration loading details",
 		zap.String("config_file", config.GetRawViper().ConfigFileUsed()),
 	)
@@ -52,15 +48,13 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	}
 	util.Logger.Debug("Full effective configuration:\n" + config.GetFormattedSettings())
 
-	// 输出配置信息
 	util.Logger.Info("Application configuration loaded")
-	util.Logger.Info("├─ Config file ", zap.String("path", config.GetRawViper().ConfigFileUsed()))
-	util.Logger.Info("├─ Database    ", zap.String("type", cfg.DB.Type))
-	util.Logger.Info("├─ Storage     ", zap.String("type", cfg.Storage.Type))
-	util.Logger.Info("├─ Server      ", zap.Int("port", cfg.Server.Port))
-	util.Logger.Info("└─ Active Mkt  ", zap.Strings("regions", cfg.Fetcher.Regions))
+	util.Logger.Info("Config file", zap.String("path", config.GetRawViper().ConfigFileUsed()))
+	util.Logger.Info("Database", zap.String("type", cfg.DB.Type))
+	util.Logger.Info("Storage", zap.String("type", cfg.Storage.Type))
+	util.Logger.Info("Server", zap.Int("port", cfg.Server.Port))
+	util.Logger.Info("Active regions", zap.Strings("regions", cfg.Fetcher.Regions))
 
-	// 根据存储类型输出更多信息
 	switch cfg.Storage.Type {
 	case "s3":
 		util.Logger.Info("S3 storage detail",
@@ -77,12 +71,10 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 		)
 	}
 
-	// 3. 初始化数据库
 	if err := repo.InitDB(); err != nil {
 		util.Logger.Fatal("Failed to initialize database")
 	}
 
-	// 4. 初始化存储
 	var s storage.Storage
 	var err error
 	switch cfg.Storage.Type {
@@ -103,7 +95,7 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 			cfg.Storage.WebDAV.Password,
 			cfg.Storage.WebDAV.PublicURLPrefix,
 		)
-	default: // local
+	default:
 		s, err = local.NewLocalStorage(cfg.Storage.Local.Root)
 	}
 
@@ -112,26 +104,22 @@ func Init(webFS embed.FS, configPath string) *gin.Engine {
 	}
 	storage.GlobalStorage = s
 
-	// 5. 初始化定时任务
 	cron.InitCron()
 
-	// 6. 启动时执行一次抓取 (可选，这里我们默认执行一次以确保有数据)
 	go func() {
 		f := fetcher.NewFetcher()
 		_ = f.Fetch(context.Background(), config.BingFetchN, false)
 	}()
 
-	// 7. 设置路由
-	return http.SetupRouter(webFS)
+	return apphttp.SetupRouter(webFS)
 }
 
-// LogWelcomeInfo 输出欢迎信息和快速跳转地址
+// LogWelcomeInfo prints quick access URLs after startup.
 func LogWelcomeInfo() {
 	cfg := config.GetConfig()
-	port := cfg.Server.Port
 	baseURL := cfg.Server.BaseURL
 	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://localhost:%d", port)
+		baseURL = fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
 	}
 
 	fmt.Println("\n---------------------------------------------------------")
@@ -140,6 +128,7 @@ func LogWelcomeInfo() {
 	fmt.Printf("  - 管理后台:   %s/admin\n", baseURL)
 	fmt.Printf("  - API 文档:   %s/swagger/index.html\n", baseURL)
 	fmt.Printf("  - 今日图片:   %s/api/v1/image/today\n", baseURL)
+	fmt.Printf("  - 健康检查:   %s/api/v1/healthz\n", baseURL)
 	fmt.Printf("  - 激活地区:   %s\n", strings.Join(cfg.Fetcher.Regions, ", "))
 	fmt.Println("---------------------------------------------------------")
 }
