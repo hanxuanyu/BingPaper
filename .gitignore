@@ -59,3 +59,5 @@ desktop.ini
 /.gocache/
 /.gomodcache/
 /.gopath/
+.env
+scripts/*.log
